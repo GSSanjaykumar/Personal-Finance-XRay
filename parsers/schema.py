@@ -16,6 +16,10 @@ class Transaction:
 
     raw_description: str
 
+    normalized_description: str
+
+    merchant_name: str
+
     amount: float
 
     transaction_type: str
@@ -25,3 +29,5 @@ class Transaction:
     bank_name: str
 
     reference_number: Optional[str]
+
+    

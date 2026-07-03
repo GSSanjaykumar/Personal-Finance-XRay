@@ -1,9 +1,15 @@
 from datetime import datetime
 
 from parsers.schema import Transaction
+from intelligence.normalizer import Normalizer
+from intelligence.matcher import Matcher
 
 
 class TransactionConverter:
+
+    def __init__(self):
+        self.normalizer = Normalizer()
+        self.matcher = Matcher()
 
     def convert(self, row, column_map):
 
@@ -17,13 +23,25 @@ class TransactionConverter:
             amount = float(credit)
             transaction_type = "Credit"
 
+        # Original description
+        raw_description = row[column_map["Narration"]]
+
+        # Normalize
+        normalized_text = self.normalizer.normalize(raw_description)
+
+        # Match merchant
+        merchant_name = self.matcher.match(normalized_text)
+
+        # Create transaction object
         transaction = Transaction(
             transaction_id=None,
             date=datetime.strptime(
                 row[column_map["Date"]],
                 "%d/%m/%Y"
             ),
-            raw_description=row[column_map["Narration"]],
+            raw_description=raw_description,
+            normalized_description=normalized_text,
+            merchant_name=merchant_name,
             amount=amount,
             transaction_type=transaction_type,
             balance=float(row[column_map["Balance"]]),
@@ -31,4 +49,4 @@ class TransactionConverter:
             reference_number=None
         )
 
-        return transaction 
+        return transaction
