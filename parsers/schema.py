@@ -19,6 +19,8 @@ class Transaction:
     normalized_description: str
 
     merchant_name: str
+    
+    category: str
 
     amount: float
 
@@ -29,5 +31,16 @@ class Transaction:
     bank_name: str
 
     reference_number: Optional[str]
+
+    
+
+    @property
+    def is_debit(self):
+        return self.transaction_type == "Debit"
+
+
+    @property
+    def is_credit(self):
+        return self.transaction_type == "Credit"
 
     

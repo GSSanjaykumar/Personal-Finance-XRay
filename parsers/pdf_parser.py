@@ -8,6 +8,8 @@ class PDFParser:
 
         with pdfplumber.open(pdf_path) as pdf:
 
+            transactions = []
+
             print("=" * 50)
             print("🏦 PDF Opened Successfully")
             print("=" * 50)
@@ -60,8 +62,9 @@ class PDFParser:
                         column_map
                     )
 
-                    print(transaction)
+                    transactions.append(transaction)
 
                     print()
 
                 print()
+        return transactions

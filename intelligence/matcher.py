@@ -18,6 +18,21 @@ class Matcher:
 
             if keyword in normalized_text:
 
-                return row["merchant_name"]
+                return {
 
-        return "Unknown Merchant"
+                    "merchant_name": row["merchant_name"],
+
+                    "category": row["category"],
+
+                    "keyword": row["keywords"]
+
+                }
+        return {
+
+        "merchant_name": "Unknown Merchant",
+
+        "category": "Others",
+
+        "keyword": None
+
+    }
