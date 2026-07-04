@@ -1,5 +1,9 @@
 from parsers.pdf_parser import PDFParser
 from analytics.statistics import Statistics
+from analytics.category_statistics import CategoryStatistics
+from analytics.spending_analyzer import SpendingAnalyzer
+from analytics.insight_generator import InsightGenerator
+from analytics.recurring_detector import RecurringDetector
 
 
 def main():
@@ -43,6 +47,69 @@ def main():
         f"{largest_credit.merchant_name}"
         f" (₹{largest_credit.amount:,.2f})"
     )
+
+    print("\n" + "=" * 60)
+    print("📂 CATEGORY ANALYTICS")
+    print("=" * 60)
+
+    category_stats = CategoryStatistics()
+
+    summary = category_stats.category_summary(transactions)
+
+    sorted_summary = sorted(
+    summary.items(),
+    key=lambda item: item[1],
+    reverse=True)
+
+    for category, amount in sorted_summary:
+        print(f"{category:<20} ₹{amount:,.2f}")
+
+
+    print("\n" + "=" * 60)
+    print("🧠 SPENDING ANALYSIS")
+    print("=" * 60)
+
+    analyzer = SpendingAnalyzer()
+
+    expense_map, total = analyzer.analyze(transactions)
+
+    for category, amount in sorted(
+            expense_map.items(),
+            key=lambda x: x[1],
+            reverse=True):
+
+        percentage = amount / total * 100
+
+        print(
+            f"{category:<20}"
+            f"₹{amount:>10,.2f}"
+            f" ({percentage:.1f}%)"
+        )
+
+    print("\n" + "=" * 60)
+    print("🤖 AI FINANCIAL INSIGHTS")
+    print("=" * 60)
+
+    generator = InsightGenerator()
+
+    insights = generator.generate(transactions)
+
+    for insight in insights:
+        print(insight)
+
+    print("\n" + "=" * 60)
+    print("🔁 RECURRING TRANSACTIONS")
+    print("=" * 60)
+
+    detector = RecurringDetector()
+
+    recurring = detector.detect(transactions)
+
+    if not recurring:
+        print("No recurring merchants found.")
+
+    for merchant, count in recurring:
+        print(f"{merchant} ({count} transactions)")
 
 
 if __name__ == "__main__":
