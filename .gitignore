@@ -9,7 +9,15 @@ __pycache__/
 # Virtual Environment
 # ==========================
 venv/
-.env/
+.venv/
+
+# ==========================
+# Environment Variables
+# ==========================
+.env
+.env.*
+backend/.env
+frontend/.env
 
 # ==========================
 # Jupyter
@@ -17,17 +25,32 @@ venv/
 .ipynb_checkpoints/
 
 # ==========================
-# VS Code
+# VS Code / IDE
 # ==========================
 .vscode/
+.idea/
+
+# ==========================
+# Coverage
+# ==========================
+coverage/
+htmlcov/
+.coverage
+
+# ==========================
+# Logs
+# ==========================
+*.log
+
+# ==========================
+# Uploads & Generated Files
+# ==========================
+uploads/
+*.sqlite3
+*.db
 
 # ==========================
 # OS Files
 # ==========================
 .DS_Store
 Thumbs.db
-
-# ==========================
-# Logs
-# ==========================
-*.log

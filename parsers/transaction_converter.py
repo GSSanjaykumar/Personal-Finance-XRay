@@ -1,7 +1,7 @@
 from datetime import datetime
 from parsers.schema import Transaction
 from intelligence.normalizer import Normalizer
-from intelligence.matcher import Matcher
+from analytics.merchant_extractor import MerchantExtractor
 
 
 
@@ -9,7 +9,7 @@ class TransactionConverter:
 
     def __init__(self):
         self.normalizer = Normalizer()
-        self.matcher = Matcher()
+        self.extractor = MerchantExtractor()
       
 
     def convert(self, row, column_map):
@@ -31,7 +31,7 @@ class TransactionConverter:
         normalized_text = self.normalizer.normalize(raw_description)
 
         # Match merchant
-        merchant = self.matcher.match(normalized_text)
+        merchant = self.extractor.extract(normalized_text)
 
         merchant_name = merchant["merchant_name"]
 

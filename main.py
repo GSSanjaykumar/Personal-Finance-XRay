@@ -4,9 +4,11 @@ from analytics.category_statistics import CategoryStatistics
 from analytics.spending_analyzer import SpendingAnalyzer
 from analytics.insight_generator import InsightGenerator
 from analytics.recurring_detector import RecurringDetector
-
+import sys
 
 def main():
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
 
     parser = PDFParser()
 

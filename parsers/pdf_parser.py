@@ -48,23 +48,23 @@ class PDFParser:
 
                     converter = TransactionConverter()
 
-                for row in table[1:]:
+                    for row in table[1:]:
 
-                    debit = row[column_map["Debit"]]
-                    credit = row[column_map["Credit"]]
+                        debit = row[column_map["Debit"]]
+                        credit = row[column_map["Credit"]]
 
-                    # Skip rows that are not transactions
-                    if debit == "" and credit == "":
-                        continue
+                        # Skip rows that are not transactions
+                        if debit == "" and credit == "":
+                            continue
 
-                    transaction = converter.convert(
-                        row,
-                        column_map
-                    )
+                        transaction = converter.convert(
+                            row,
+                            column_map
+                        )
 
-                    transactions.append(transaction)
+                        transactions.append(transaction)
+
+                        print()
 
                     print()
-
-                print()
         return transactions
