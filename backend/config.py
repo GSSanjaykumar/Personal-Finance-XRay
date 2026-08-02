@@ -22,7 +22,7 @@ load_dotenv(dotenv_path=env_path)
 logger.info("Environment loaded")
 
 # ── Configuration Validation ──────────────────────────────────────────────────
-REQUIRED_VARS = ["MONGODB_URI", "DATABASE_NAME"]
+REQUIRED_VARS = ["MONGODB_URI", "DATABASE_NAME", "GOOGLE_CLIENT_ID"]
 missing = [var for var in REQUIRED_VARS if not os.getenv(var)]
 
 if missing:

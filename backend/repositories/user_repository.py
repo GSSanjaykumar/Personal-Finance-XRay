@@ -22,3 +22,16 @@ class UserRepository(BaseRepository[UserDocument]):
             {"_id": user_id},
             {"$set": {"last_login": datetime.now(timezone.utc)}}
         )
+        
+    def find_by_google_sub(self, google_sub: str) -> Optional[UserDocument]:
+        return self.find_one({"google_sub": google_sub})
+        
+    def link_google_account(self, user_id: str, google_sub: str, picture: Optional[str] = None):
+        update_fields = {"google_sub": google_sub}
+        if picture:
+            update_fields["picture"] = picture
+        self.update(
+            {"_id": user_id},
+            {"$set": update_fields}
+        )
+

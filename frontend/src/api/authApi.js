@@ -20,3 +20,9 @@ export async function getMe() {
     const response = await API.get("/api/auth/me");
     return response.data;
 }
+
+export async function loginWithGoogle(credential) {
+    const response = await API.post("/api/auth/google", { credential });
+    return response.data;
+}
+

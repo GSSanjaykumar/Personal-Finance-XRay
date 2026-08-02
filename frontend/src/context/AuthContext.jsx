@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { login as apiLogin, register as apiRegister, getMe } from '../api/authApi';
+import { login as apiLogin, register as apiRegister, getMe, loginWithGoogle as apiLoginWithGoogle } from '../api/authApi';
 
 export const AuthContext = createContext();
 
@@ -44,13 +44,20 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
     };
 
+    const loginWithGoogle = async (credential) => {
+        const data = await apiLoginWithGoogle(credential);
+        localStorage.setItem("token", data.access_token);
+        const userData = await getMe();
+        setUser(userData);
+    };
+
     const logout = () => {
         localStorage.removeItem("token");
         setUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout }}>
             {children}
         </AuthContext.Provider>
     );

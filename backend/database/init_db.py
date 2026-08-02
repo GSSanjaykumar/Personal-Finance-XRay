@@ -23,6 +23,7 @@ def init_db():
         recur_col = os.getenv("COLLECTION_RECURRING", "recurring")
         forecast_col = os.getenv("COLLECTION_FORECAST", "forecasts")
         chat_col = os.getenv("COLLECTION_CHAT", "chat_history")
+        users_col = os.getenv("COLLECTION_USERS", "users")
         
         # Transactions indexes
         db[tx_col].create_index([("userId", ASCENDING)])
@@ -46,6 +47,9 @@ def init_db():
         
         # Chat indexes
         db[chat_col].create_index([("userId", ASCENDING), ("createdAt", DESCENDING)])
+        
+        # User indexes
+        db[users_col].create_index([("google_sub", ASCENDING)], unique=True, sparse=True)
         
         logger.info("Successfully initialized MongoDB indexes.")
         

@@ -7,6 +7,7 @@ class MongoDocument(BaseModel):
 
 class UserDocument(MongoDocument):
     email: str
+    google_sub: Optional[str] = None
     password_hash: Optional[str] = None
     provider: str = "local"
     picture: Optional[str] = None
