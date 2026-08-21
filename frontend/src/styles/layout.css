@@ -2247,9 +2247,7 @@ color:#22C55E;
     .forecast-widget-stats{
         grid-template-columns:1fr;
     }
-    font-size:11px;
 }
-
 /* ======================================================
    FORECAST PROGRESS BARS
    ====================================================== */

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import Navbar from "../components/layout/Navbar";
 import { getDashboard, getTransactions } from "../api/financeApi";
 import Skeleton from "../components/ui/Skeleton";
 import ErrorState from "../components/ui/ErrorState";
@@ -96,72 +95,74 @@ export default function Categories() {
 
     if (loading) return (
         <>
-            <Navbar />
-            <div style={{ marginTop: '24px' }}>
+                        <div style={{ marginTop: '24px' }}>
                 <Skeleton type="grid" count={2} />
             </div>
         </>
     );
-    if (error) return <><Navbar /><ErrorState message={error} onRetry={fetchData} /></>;
-    if (categoryStats.length === 0) return <><Navbar /><EmptyState title="No categories found" message="No expense data available to analyze." /></>;
+    if (error) return <><ErrorState message={error} onRetry={fetchData} /></>;
+    if (categoryStats.length === 0) return <><EmptyState title="No categories found" message="No expense data available to analyze." /></>;
 
     return (
-        <>
-            <Navbar />
-            
-            <div className="page-header">
-                <div>
-                    <h1>Categories</h1>
-                    <p className="subtitle">Detailed breakdown of your spending by category.</p>
-                </div>
-            </div>
+        <div className="space-y-6">
+            <header className="mb-6">
+                <h1 className="text-3xl font-semibold tracking-tight">Categories</h1>
+                <p className="mt-1.5 text-muted-foreground">Detailed breakdown of your spending by category.</p>
+            </header>
 
-            <div className="categories-grid">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {categoryStats.map((stat, idx) => {
                     const hasBudget = stat.budget !== null;
                     const pct = hasBudget ? Math.min(stat.budget.percentage, 100) : 0;
-                    const statusClass = hasBudget ? (stat.budget.status === "Exceeded" ? "danger" : stat.budget.status === "Near Limit" ? "warning" : "good") : "good";
+                    const statusClass = hasBudget ? (stat.budget.status === "Exceeded" ? "bg-[var(--negative)]" : stat.budget.status === "Near Limit" ? "bg-[var(--warning)]" : "bg-[var(--positive)]") : "bg-[var(--positive)]";
+                    const statusTextClass = hasBudget ? (stat.budget.status === "Exceeded" ? "text-[var(--negative)]" : stat.budget.status === "Near Limit" ? "text-[var(--warning)]" : "text-[var(--positive)]") : "text-muted-foreground";
 
                     return (
-                        <div key={idx} className="category-detail-card" onClick={() => setSelectedCategory(stat)}>
-                            <div className="cat-card-header">
-                                <div className="cat-card-title">
-                                    <span className="cat-icon" aria-hidden="true">{ICONS[stat.category] || "📊"}</span>
-                                    <h3>{stat.category}</h3>
+                        <div 
+                            key={idx} 
+                            className="group cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
+                            onClick={() => setSelectedCategory(stat)}
+                        >
+                            <div className="mb-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex size-10 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-xl">
+                                        <span aria-hidden="true">{ICONS[stat.category] || "📊"}</span>
+                                    </div>
+                                    <h3 className="text-lg font-semibold">{stat.category}</h3>
                                 </div>
-                                <span className="cat-card-amount">{formatCurrency(stat.total_spend)}</span>
+                                <span className="text-xl font-semibold tracking-tight">{formatCurrency(stat.total_spend)}</span>
                             </div>
                             
-                            <div className="cat-card-stats">
-                                <div className="cat-stat">
-                                    <span>Transactions</span>
-                                    <strong>{stat.count}</strong>
+                            <div className="mb-5 grid grid-cols-3 gap-4 rounded-xl bg-[var(--surface-2)] p-4 group-hover:bg-[var(--surface)] transition-colors">
+                                <div>
+                                    <span className="block text-xs font-medium text-muted-foreground">Transactions</span>
+                                    <strong className="mt-1 block font-semibold">{stat.count}</strong>
                                 </div>
-                                <div className="cat-stat">
-                                    <span>Avg. Spend</span>
-                                    <strong>{formatCurrency(Math.round(stat.average))}</strong>
+                                <div>
+                                    <span className="block text-xs font-medium text-muted-foreground">Avg. Spend</span>
+                                    <strong className="mt-1 block font-semibold">{formatCurrency(Math.round(stat.average))}</strong>
                                 </div>
-                                <div className="cat-stat">
-                                    <span>Top Merchant</span>
-                                    <strong>{stat.top_merchant}</strong>
+                                <div>
+                                    <span className="block text-xs font-medium text-muted-foreground">Top Merchant</span>
+                                    <strong className="mt-1 block truncate font-semibold">{stat.top_merchant}</strong>
                                 </div>
                             </div>
 
                             {hasBudget ? (
-                                <div className="cat-card-budget">
-                                    <div className="cat-budget-labels">
-                                        <span>Budget: {formatCurrency(stat.budget.budget)}</span>
-                                        <span className={statusClass}>
+                                <div>
+                                    <div className="mb-2 flex justify-between text-sm">
+                                        <span className="font-medium text-muted-foreground">Budget: {formatCurrency(stat.budget.budget)}</span>
+                                        <span className={`font-semibold ${statusTextClass}`}>
                                             {stat.budget.remaining >= 0 ? `${formatCurrency(stat.budget.remaining)} left` : `Exceeded by ${formatCurrency(Math.abs(stat.budget.remaining))}`}
                                         </span>
                                     </div>
-                                    <div className="budget-progress">
-                                        <div className={`budget-fill ${statusClass}`} style={{ width: `${pct}%` }} />
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--border)]">
+                                        <div className={`h-full rounded-full transition-all duration-500 ${statusClass}`} style={{ width: `${pct}%` }} />
                                     </div>
                                 </div>
                             ) : (
-                                <div className="cat-card-no-budget">
-                                    <span>No budget set for this category</span>
+                                <div className="flex items-center justify-center rounded-lg border border-dashed border-[var(--border)] p-3 text-sm text-muted-foreground">
+                                    No budget set for this category
                                 </div>
                             )}
                         </div>
@@ -170,13 +171,26 @@ export default function Categories() {
             </div>
 
             {selectedCategory && (
-                <div className="modal-overlay" onClick={() => setSelectedCategory(null)}>
-                    <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h2>{ICONS[selectedCategory.category] || "📊"} {selectedCategory.category} Transactions</h2>
-                            <button className="close-btn" onClick={() => setSelectedCategory(null)}>✖</button>
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+                    onClick={() => setSelectedCategory(null)}
+                >
+                    <div 
+                        className="flex max-h-[85vh] w-full max-w-4xl flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl" 
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between border-b border-[var(--border)] p-6">
+                            <h2 className="text-xl font-semibold tracking-tight">
+                                {ICONS[selectedCategory.category] || "📊"} {selectedCategory.category} Transactions
+                            </h2>
+                            <button 
+                                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-[var(--surface-2)] hover:text-foreground"
+                                onClick={() => setSelectedCategory(null)}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
                         </div>
-                        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                        <div className="overflow-y-auto p-6">
                             <TransactionTable 
                                 transactions={selectedCategory.transactions.sort((a,b) => new Date(b.date) - new Date(a.date))} 
                                 title={null} 
@@ -185,6 +199,6 @@ export default function Categories() {
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 }

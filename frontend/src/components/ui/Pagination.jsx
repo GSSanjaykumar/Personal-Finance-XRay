@@ -14,38 +14,42 @@ export default function Pagination({ currentPage, totalPages, onPageChange }) {
 
     for (let i = 1; i <= totalPages; i++) {
         if (showPage(i)) {
-            pages.push(
-                <button
-                    key={i}
-                    onClick={() => onPageChange(i)}
-                    className={`pagination-btn ${currentPage === i ? "active" : ""}`}
-                >
-                    {i}
-                </button>
-            );
+            pages.push(i);
         } else if (pages[pages.length - 1] !== "...") {
             pages.push("...");
         }
     }
 
     return (
-        <div className="pagination-container">
+        <div className="flex items-center justify-between border-t border-[var(--border)] pt-4">
             <button
-                className="pagination-nav-btn"
+                className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] bg-transparent px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)] hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage === 1}
             >
                 Prev
             </button>
-            <div className="pagination-pages">
-                {pages.map((p, idx) => (
+            <div className="flex items-center gap-1">
+                {pages.map((p, i) => (
                     p === "..." ? (
-                        <span key={`dots-${idx}`} className="pagination-dots">...</span>
-                    ) : p
+                        <span key={`ellipsis-${i}`} className="px-2 text-sm text-muted-foreground">...</span>
+                    ) : (
+                        <button
+                            key={i}
+                            onClick={() => onPageChange(p)}
+                            className={`inline-flex h-9 w-9 items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-[var(--surface-2)] hover:text-foreground ${
+                                currentPage === p 
+                                    ? "bg-[var(--accent)] text-white hover:bg-[var(--accent)]" 
+                                    : "bg-transparent text-muted-foreground"
+                            }`}
+                        >
+                            {p}
+                        </button>
+                    )
                 ))}
             </div>
             <button
-                className="pagination-nav-btn"
+                className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] bg-transparent px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)] hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
             >

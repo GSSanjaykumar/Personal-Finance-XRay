@@ -1,130 +1,68 @@
-import { useEffect, useState, useCallback } from "react";
-import Navbar from "../components/layout/Navbar";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { getForecast } from "../api/financeApi";
 import Skeleton from "../components/ui/Skeleton";
 import ErrorState from "../components/ui/ErrorState";
 import EmptyState from "../components/ui/EmptyState";
 import { formatCurrency } from "../utils/formatters";
-
-/**
- * Forecast page — consumes GET /forecast.
- * Displays projected month-end spending, savings, budget risk, daily average,
- * cashflow prediction, and pending recurring charges as visual cards.
- */
+import { AlertCircle, CheckCircle2, TrendingUp, DollarSign, Target, CalendarDays, Wallet } from "lucide-react";
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, ReferenceLine } from "recharts";
 
 const RISK_CONFIG = {
     Low: {
-        color: "#22C55E",
-        bg: "rgba(34,197,94,.12)",
-        border: "rgba(34,197,94,.25)",
-        icon: "✅",
+        color: "text-[var(--positive)]",
+        bg: "bg-[var(--positive-soft)]",
+        border: "border-[var(--positive)]/30",
+        icon: CheckCircle2,
         label: "Low Risk",
+        msg: "Your spending is well within budget limits.",
     },
     Medium: {
-        color: "#EAB308",
-        bg: "rgba(234,179,8,.12)",
-        border: "rgba(234,179,8,.25)",
-        icon: "⚠️",
+        color: "text-[var(--warning)]",
+        bg: "bg-[var(--warning-soft)]",
+        border: "border-[var(--warning)]/30",
+        icon: AlertCircle,
         label: "Medium Risk",
+        msg: "Spending is approaching your budget limit.",
     },
     High: {
-        color: "#EF4444",
-        bg: "rgba(239,68,68,.12)",
-        border: "rgba(239,68,68,.25)",
-        icon: "🚨",
+        color: "text-[var(--negative)]",
+        bg: "bg-[var(--negative-soft)]",
+        border: "border-[var(--negative)]/30",
+        icon: AlertCircle,
         label: "High Risk",
         msg: "Budget exceeded or at high risk.",
     },
 };
 
-function RiskGauge({ risk }) {
-    const cfg = RISK_CONFIG[risk] || RISK_CONFIG.Low;
-    const pct = risk === "Low" ? 33 : risk === "Medium" ? 66 : 100;
-
-    return (
-        <div 
-            className="forecast-banner" 
-            style={{ 
-                background: cfg.bg, 
-                borderLeft: `4px solid ${cfg.color}`,
-                padding: '16px 24px',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '20px',
-                marginBottom: '24px'
-            }}
-        >
-            <div style={{
-                background: 'rgba(255,255,255,0.1)',
-                padding: '12px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px'
-            }}>
-                {cfg.icon}
-            </div>
-            <div style={{ flex: 1 }}>
-                <h3 style={{ color: cfg.color, margin: '0 0 4px 0', fontSize: '18px' }}>{cfg.label} Level</h3>
-                <p style={{ margin: 0, color: 'white', fontSize: '14px', opacity: 0.9 }}>{cfg.msg}</p>
-            </div>
-            
-            <div style={{ width: '150px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px', color: 'white', opacity: 0.8 }}>
-                    <span>Confidence</span>
-                    <span>{pct}%</span>
-                </div>
-                <div className="risk-gauge-track" style={{ background: 'rgba(255,255,255,0.1)', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div
-                        className="risk-gauge-fill"
-                        style={{
-                            width: `${pct}%`,
-                            background: cfg.color,
-                            height: '100%'
-                        }}
-                    />
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function ForecastBar({ label, value, max, color }) {
+function ForecastBar({ label, value, max, colorClass }) {
     const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
     return (
-        <div className="forecast-bar-row">
-            <div className="forecast-bar-label">
-                <span>{label}</span>
-                <strong style={{ color }}>{formatCurrency(value)}</strong>
+        <div className="flex flex-col gap-2">
+            <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{label}</span>
+                <strong className={`font-semibold ${colorClass}`}>{formatCurrency(value)}</strong>
             </div>
-            <div className="forecast-bar-track">
-                <div
-                    className="forecast-bar-fill"
-                    style={{ width: `${pct}%`, background: color }}
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-3)]">
+                <div 
+                    className={`h-full rounded-full transition-all duration-1000 ${colorClass.replace('text-', 'bg-')}`} 
+                    style={{ width: `${pct}%` }} 
                 />
             </div>
         </div>
     );
 }
 
-function MetricCard({ icon, label, value, sub, color, id }) {
+function MetricCard({ icon: Icon, label, value, sub, colorClass }) {
     return (
-        <div className="forecast-metric-card" id={id}>
-            <div className="forecast-metric-icon">{icon}</div>
-            <div className="forecast-metric-body">
-                <p className="forecast-metric-label">{label}</p>
-                <h3
-                    className="forecast-metric-value"
-                    style={{ color: color || "white" }}
-                >
-                    {value}
-                </h3>
-                {sub && (
-                    <span className="forecast-metric-sub">{sub}</span>
-                )}
+        <div className="flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+            <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-[var(--surface-2)]">
+                <Icon className={`size-6 ${colorClass}`} />
             </div>
+            <p className="text-sm font-medium text-muted-foreground">{label}</p>
+            <h3 className={`mt-2 text-2xl font-bold tracking-tight ${colorClass}`}>
+                {value}
+            </h3>
+            {sub && <span className="mt-1 text-xs text-muted-foreground">{sub}</span>}
         </div>
     );
 }
@@ -151,52 +89,86 @@ export default function Forecast() {
         fetchForecast();
     }, [fetchForecast]);
 
-    // ── Loading ──────────────────────────────────────────────────────────
+    const chartData = useMemo(() => {
+        if (!data) return [];
+        const { current_month, forecast, daily_average } = data;
+        
+        const daysInMonth = current_month.days_elapsed + current_month.days_remaining;
+        const pts = [];
+        
+        let cumulativeSpent = 0;
+        for (let i = 1; i <= daysInMonth; i++) {
+            if (i <= current_month.days_elapsed) {
+                // Historical
+                cumulativeSpent += daily_average; 
+                pts.push({
+                    day: `Day ${i}`,
+                    actual: i === current_month.days_elapsed ? current_month.expense : cumulativeSpent,
+                    projected: null
+                });
+            } else {
+                // Projected
+                if (i === current_month.days_elapsed + 1) {
+                    // Connect the lines
+                    pts.push({
+                        day: `Day ${i}`,
+                        actual: null,
+                        projected: current_month.expense + daily_average
+                    });
+                } else {
+                    pts.push({
+                        day: `Day ${i}`,
+                        actual: null,
+                        projected: current_month.expense + (daily_average * (i - current_month.days_elapsed))
+                    });
+                }
+            }
+        }
+        return pts;
+    }, [data]);
+
     if (loading) return (
-        <>
-            <Navbar />
-            <div style={{ marginTop: '24px' }}>
-                <Skeleton type="grid" count={2} />
+        <div className="space-y-6">
+            <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <Skeleton type="card" style={{ height: "40px", width: "200px" }} />
+            </header>
+            <Skeleton type="card" style={{ height: "80px" }} />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Skeleton type="card" style={{ height: "140px" }} />
+                <Skeleton type="card" style={{ height: "140px" }} />
+                <Skeleton type="card" style={{ height: "140px" }} />
+                <Skeleton type="card" style={{ height: "140px" }} />
             </div>
-        </>
+            <Skeleton type="card" style={{ height: "350px" }} />
+        </div>
     );
 
-    // ── Error ────────────────────────────────────────────────────────────
-    if (error) {
-        return (
-            <>
-                <Navbar />
-                <ErrorState message={error} onRetry={fetchForecast} />
-            </>
-        );
-    }
+    if (error) return <ErrorState message={error} onRetry={fetchForecast} />;
 
-    // ── Empty state ──────────────────────────────────────────────────────
-    const isEmpty =
-        !data || data?.current_month?.days_elapsed === 0;
+    const isEmpty = !data || data?.current_month?.days_elapsed === 0;
 
     if (isEmpty) {
         return (
-            <>
-                <Navbar />
-                <div className="page-header" id="forecast-page-header">
-                    <div>
-                        <h1>Spending Forecast</h1>
-                        <p className="subtitle">Cash flow prediction for this month</p>
-                    </div>
-                </div>
-                <div className="table-card">
+            <div className="space-y-8">
+                <header>
+                    <h1 className="text-3xl font-semibold tracking-tight">Spending Forecast</h1>
+                    <p className="mt-1.5 text-muted-foreground">Cash flow prediction for this month</p>
+                </header>
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8">
                     <EmptyState 
-                        title="No forecast data available."
-                        description="Upload a bank statement containing transactions from the current month to generate a forecast."
+                        title="No forecast data available"
+                        message="Upload a bank statement containing transactions from the current month to generate a forecast."
+                        icon="📈"
                     />
                 </div>
-            </>
+            </div>
         );
     }
 
     const { current_month, forecast, daily_average, cashflow_prediction } = data;
-    const risk = forecast.budget_risk;
+    const risk = forecast.budget_risk || "Low";
+    const cfg = RISK_CONFIG[risk];
+    
     const maxBar = Math.max(
         forecast.projected_month_end_expense,
         current_month.expense,
@@ -204,139 +176,182 @@ export default function Forecast() {
         1
     );
 
-    const savingsColor =
-        forecast.projected_savings >= 0 ? "#22C55E" : "#EF4444";
-    const cashflowColor = cashflow_prediction >= 0 ? "#22C55E" : "#EF4444";
+    const isSavingsPositive = forecast.projected_savings >= 0;
+    const isCashflowPositive = cashflow_prediction >= 0;
+
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] p-3 shadow-lg">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">{label}</p>
+                    {payload.map((p, i) => (
+                        <p key={i} className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                            <span className="size-2 rounded-full" style={{ background: p.color }} />
+                            {p.name === 'actual' ? 'Actual Spend' : 'Projected Spend'}: {formatCurrency(p.value)}
+                        </p>
+                    ))}
+                </div>
+            );
+        }
+        return null;
+    };
 
     return (
-        <>
-            <Navbar />
-
-            {/* ── Page header ──────────────────────────────────────────── */}
-            <div className="page-header" id="forecast-page-header">
+        <div className="space-y-8 pb-10">
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h1>Spending Forecast</h1>
-                    <p className="subtitle">
-                        Cash flow prediction · {current_month.days_elapsed} days
-                        elapsed · {current_month.days_remaining} days remaining
+                    <h1 className="text-3xl font-semibold tracking-tight">Spending Forecast</h1>
+                    <p className="mt-1.5 text-muted-foreground">
+                        Cash flow prediction · {current_month.days_elapsed} days elapsed · {current_month.days_remaining} days remaining
                     </p>
+                </div>
+            </header>
+
+            {/* Risk Banner */}
+            <div className={`flex items-center gap-4 rounded-xl border ${cfg.border} ${cfg.bg} p-4`}>
+                <div className={`flex size-10 shrink-0 items-center justify-center rounded-full bg-white/10 ${cfg.color}`}>
+                    <cfg.icon className="size-5" />
+                </div>
+                <div>
+                    <h3 className={`font-semibold ${cfg.color}`}>{cfg.label} Level</h3>
+                    <p className="text-sm text-foreground/80">{cfg.msg}</p>
                 </div>
             </div>
 
-            {/* ── Budget Risk Gauge ─────────────────────────────────────── */}
-            <RiskGauge risk={risk} />
-
-            {/* ── Four metric cards ─────────────────────────────────────── */}
-            <div className="forecast-metrics-grid" id="forecast-metrics">
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
-                    id="metric-projected-expense"
-                    icon="📊"
-                    label="Projected Month-End Spending"
+                    icon={TrendingUp}
+                    label="Projected Month-End"
                     value={formatCurrency(forecast.projected_month_end_expense)}
-                    sub={`Based on ${formatCurrency(daily_average)}/day average`}
-                    color="white"
+                    sub={`Based on ${formatCurrency(daily_average)}/day`}
+                    colorClass="text-foreground"
                 />
                 <MetricCard
-                    id="metric-projected-savings"
-                    icon="🏦"
+                    icon={Wallet}
                     label="Projected Savings"
                     value={formatCurrency(forecast.projected_savings)}
                     sub="Income − projected spend"
-                    color={savingsColor}
+                    colorClass={isSavingsPositive ? "text-[var(--positive)]" : "text-[var(--negative)]"}
                 />
                 <MetricCard
-                    id="metric-remaining-budget"
-                    icon="💳"
+                    icon={Target}
                     label="Remaining Budget"
                     value={formatCurrency(forecast.remaining_budget)}
                     sub="Monthly budget − spent so far"
-                    color={
-                        forecast.remaining_budget > 0 ? "#22C55E" : "#EF4444"
-                    }
+                    colorClass={forecast.remaining_budget > 0 ? "text-[var(--positive)]" : "text-[var(--negative)]"}
                 />
                 <MetricCard
-                    id="metric-cashflow"
-                    icon="💰"
+                    icon={DollarSign}
                     label="Cashflow Prediction"
                     value={formatCurrency(cashflow_prediction)}
-                    sub="Expected end-of-month net position"
-                    color={cashflowColor}
+                    sub="Expected end-of-month position"
+                    colorClass={isCashflowPositive ? "text-[var(--positive)]" : "text-[var(--negative)]"}
                 />
             </div>
 
-            {/* ── Forecast progress bars ────────────────────────────────── */}
-            <div className="table-card" id="forecast-bars">
-                <h3>Forecast Overview</h3>
-                <div className="forecast-bars-container">
-                    <ForecastBar
-                        label="Spent So Far"
-                        value={current_month.expense}
-                        max={maxBar}
-                        color="#7B2FF7"
-                    />
-                    <ForecastBar
-                        label="Projected Month-End"
-                        value={forecast.projected_month_end_expense}
-                        max={maxBar}
-                        color={
-                            risk === "High"
-                                ? "#EF4444"
-                                : risk === "Medium"
-                                ? "#EAB308"
-                                : "#22C55E"
-                        }
-                    />
-                    <ForecastBar
-                        label="Pending Recurring Charges"
-                        value={forecast.expected_recurring_remaining}
-                        max={maxBar}
-                        color="#F72585"
-                    />
-                    <ForecastBar
-                        label="Remaining Budget"
-                        value={forecast.remaining_budget}
-                        max={maxBar}
-                        color="#00C9A7"
-                    />
+            {/* Main Chart */}
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+                <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 className="text-lg font-semibold tracking-tight">Spend Trajectory</h2>
+                        <p className="text-sm text-muted-foreground">Historical vs Projected Month-End Spending</p>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs font-medium">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <span className="size-2.5 rounded-full bg-[var(--accent)]" />
+                            Actual
+                        </div>
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <span className="size-2.5 rounded-full border border-[var(--border-strong)] border-dashed bg-transparent" />
+                            Projected
+                        </div>
+                    </div>
+                </div>
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
+                            <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted)' }} dy={10} minTickGap={30} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted)' }} tickFormatter={(val) => `₹${val/1000}k`} dx={-10} />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Area type="monotone" dataKey="actual" stroke="var(--accent)" strokeWidth={2} fillOpacity={1} fill="url(#colorActual)" />
+                            <Area type="monotone" dataKey="projected" stroke="var(--border-strong)" strokeDasharray="5 5" strokeWidth={2} fill="transparent" />
+                        </AreaChart>
+                    </ResponsiveContainer>
                 </div>
             </div>
 
-            {/* ── Current month summary ─────────────────────────────────── */}
-            <div className="table-card" id="forecast-current-month">
-                <h3>This Month So Far</h3>
-                <div className="forecast-summary-grid">
-                    <div className="forecast-summary-item">
-                        <span>Income</span>
-                        <strong style={{ color: "#22C55E" }}>
-                            {formatCurrency(current_month.income)}
-                        </strong>
+            {/* Split Bottom Section */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Forecast Overview Bars */}
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+                    <h3 className="mb-6 text-lg font-semibold tracking-tight">Forecast Overview</h3>
+                    <div className="space-y-6">
+                        <ForecastBar
+                            label="Spent So Far"
+                            value={current_month.expense}
+                            max={maxBar}
+                            colorClass="text-[var(--accent)]"
+                        />
+                        <ForecastBar
+                            label="Projected Month-End"
+                            value={forecast.projected_month_end_expense}
+                            max={maxBar}
+                            colorClass={cfg.color}
+                        />
+                        <ForecastBar
+                            label="Pending Recurring"
+                            value={forecast.expected_recurring_remaining}
+                            max={maxBar}
+                            colorClass="text-[#F72585]"
+                        />
+                        <ForecastBar
+                            label="Remaining Budget"
+                            value={forecast.remaining_budget}
+                            max={maxBar}
+                            colorClass="text-[var(--positive)]"
+                        />
                     </div>
-                    <div className="forecast-summary-item">
-                        <span>Expenses</span>
-                        <strong style={{ color: "#EF4444" }}>
-                            {formatCurrency(current_month.expense)}
-                        </strong>
-                    </div>
-                    <div className="forecast-summary-item">
-                        <span>Daily Average</span>
-                        <strong>{formatCurrency(daily_average)}</strong>
-                    </div>
-                    <div className="forecast-summary-item">
-                        <span>Pending Recurring</span>
-                        <strong style={{ color: "#F72585" }}>
-                            {formatCurrency(forecast.expected_recurring_remaining)}
-                        </strong>
-                    </div>
-                    <div className="forecast-summary-item">
-                        <span>Days Elapsed</span>
-                        <strong>{current_month.days_elapsed}</strong>
-                    </div>
-                    <div className="forecast-summary-item">
-                        <span>Days Remaining</span>
-                        <strong>{current_month.days_remaining}</strong>
+                </div>
+
+                {/* This Month So Far */}
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
+                    <h3 className="mb-6 text-lg font-semibold tracking-tight">This Month So Far</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-1 rounded-xl bg-[var(--surface-2)] p-4">
+                            <span className="text-xs font-medium text-muted-foreground">Income</span>
+                            <span className="text-lg font-semibold text-[var(--positive)]">{formatCurrency(current_month.income)}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 rounded-xl bg-[var(--surface-2)] p-4">
+                            <span className="text-xs font-medium text-muted-foreground">Expenses</span>
+                            <span className="text-lg font-semibold text-[var(--negative)]">{formatCurrency(current_month.expense)}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 rounded-xl bg-[var(--surface-2)] p-4">
+                            <span className="text-xs font-medium text-muted-foreground">Daily Average</span>
+                            <span className="text-lg font-semibold text-foreground">{formatCurrency(daily_average)}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 rounded-xl bg-[var(--surface-2)] p-4">
+                            <span className="text-xs font-medium text-muted-foreground">Pending Recurring</span>
+                            <span className="text-lg font-semibold text-[#F72585]">{formatCurrency(forecast.expected_recurring_remaining)}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 rounded-xl bg-[var(--surface-2)] p-4">
+                            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><CalendarDays className="size-3.5" /> Days Elapsed</span>
+                            <span className="text-lg font-semibold text-foreground">{current_month.days_elapsed}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 rounded-xl bg-[var(--surface-2)] p-4">
+                            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><CalendarDays className="size-3.5" /> Days Remaining</span>
+                            <span className="text-lg font-semibold text-foreground">{current_month.days_remaining}</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

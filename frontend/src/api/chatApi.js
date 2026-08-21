@@ -18,3 +18,21 @@ export async function sendChatMessage(message, history = []) {
   const response = await API.post("/chat", { message, history });
   return response.data;
 }
+
+/**
+ * Upload a PDF to extract text for the AI chat context.
+ *
+ * @param {File} file - The PDF file object.
+ * @returns {Promise<string>} - The extracted text.
+ */
+export async function uploadChatPdf(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await API.post("/chat/upload-pdf", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data.extracted_text;
+}

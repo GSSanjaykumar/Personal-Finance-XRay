@@ -11,7 +11,12 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
 from backend.services.chat_service import handle_chat
-from fastapi import Depends
+from fastapi import Depends, UploadFile, File
+import pdfplumber
+import io
+import logging
+
+logger = logging.getLogger(__name__)
 from backend.auth.dependencies import get_current_user
 
 chat_router = APIRouter(tags=["AI Chat"])
@@ -73,3 +78,42 @@ async def chat(request: ChatRequest, current_user = Depends(get_current_user)) -
         widgets=result.get("widgets"),
         provider_metadata=result.get("provider_metadata")
     )
+
+
+@chat_router.post("/chat/upload-pdf")
+async def chat_upload_pdf(file: UploadFile = File(...), current_user = Depends(get_current_user)) -> dict:
+    """
+    Accepts a PDF file, extracts plain text from it safely, and returns the text
+    to be appended to the chat context on the frontend.
+    """
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+        
+    try:
+        content = await file.read()
+        
+        extracted_text = []
+        with pdfplumber.open(io.BytesIO(content)) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    extracted_text.append(text)
+        
+        full_text = "\n".join(extracted_text)
+        
+        if not full_text.strip():
+            raise HTTPException(status_code=400, detail="Could not extract text from this PDF. It may be scanned or image-based.")
+            
+        # Limit to ~15,000 characters to prevent overflowing the AI's context window
+        max_chars = 15000
+        if len(full_text) > max_chars:
+            logger.warning(f"PDF {file.filename} is too large ({len(full_text)} chars), truncating to {max_chars}.")
+            full_text = full_text[:max_chars] + "... [Text truncated due to size limits]"
+            
+        return {"extracted_text": full_text}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing PDF for chat: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process PDF: {str(e)}")

@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import Navbar from "../components/layout/Navbar";
 import { getDashboard } from "../api/financeApi";
 import Skeleton from "../components/ui/Skeleton";
 import ErrorState from "../components/ui/ErrorState";
@@ -67,19 +66,17 @@ export default function Recurring() {
 
     if (loading) return (
         <>
-            <Navbar />
-            <div style={{ marginTop: '24px' }}>
+                        <div style={{ marginTop: '24px' }}>
                 <Skeleton type="grid" count={1} style={{ marginBottom: '32px' }} />
                 <Skeleton type="table" count={1} />
             </div>
         </>
     );
-    if (error) return <><Navbar /><ErrorState message={error} onRetry={fetchData} /></>;
+    if (error) return <><ErrorState message={error} onRetry={fetchData} /></>;
 
     return (
         <>
-            <Navbar />
-
+            
             <div className="page-header" id="recurring-page-header">
                 <div>
                     <h1>Recurring Payments</h1>

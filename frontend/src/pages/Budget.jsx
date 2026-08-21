@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import Navbar from "../components/layout/Navbar";
 import BudgetModal from "../components/budget/BudgetModal";
 import { getBudget, updateBudget, getBudgetAnalysis } from "../api/financeApi";
 import Skeleton from "../components/ui/Skeleton";
 import ErrorState from "../components/ui/ErrorState";
 import EmptyState from "../components/ui/EmptyState";
 import { formatCurrency, formatCategory } from "../utils/formatters";
+import { Edit2, Lightbulb, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 
 const ICONS = {
     "Food & Dining": "🍕",
@@ -33,10 +33,8 @@ export default function Budget() {
                 getBudgetAnalysis()
             ]);
             setBudget(budgetData || {});
-            // BUG FIX: /budget-analysis returns a plain array, not {budget: [], budget_insights: []}
             const analysisArray = Array.isArray(analysisData) ? analysisData : (analysisData?.budget || []);
             setAnalysis(analysisArray);
-            // Generate insights from the analysis array directly on client side
             setBudgetInsights(analysisData?.budget_insights || []);
         } catch {
             setError("Failed to load budget data.");
@@ -54,7 +52,6 @@ export default function Budget() {
             const result = await updateBudget(values);
             setBudget(result.budget);
 
-            // Recalculate analysis
             const newAnalysis = await getBudgetAnalysis();
             const analysisArray = Array.isArray(newAnalysis) ? newAnalysis : (newAnalysis?.budget || []);
             setAnalysis(analysisArray);
@@ -65,7 +62,6 @@ export default function Budget() {
         }
     }
     
-    // Budget Summary Calculation
     const summary = useMemo(() => {
         let totalBudget = 0;
         let totalSpent = 0;
@@ -87,48 +83,59 @@ export default function Budget() {
     }, [analysis, budget]);
 
     if (loading) return (
-        <>
-            <Navbar />
-            <div style={{ marginTop: '24px' }}>
-                <Skeleton type="grid" count={2} />
+        <div className="space-y-6">
+            <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <Skeleton type="card" style={{ height: "40px", width: "200px" }} />
+            </header>
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <Skeleton type="card" style={{ height: "100px" }} />
+                <Skeleton type="card" style={{ height: "100px" }} />
+                <Skeleton type="card" style={{ height: "100px" }} />
+                <Skeleton type="card" style={{ height: "100px" }} />
             </div>
-        </>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                <Skeleton type="card" style={{ height: "250px" }} />
+                <Skeleton type="card" style={{ height: "250px" }} />
+            </div>
+        </div>
     );
-    if (error) return <><Navbar /><ErrorState message={error} onRetry={loadBudget} /></>;
+    if (error) return <ErrorState message={error} onRetry={loadBudget} />;
 
     return (
-        <>
-            <Navbar />
-            
-            <div className="page-header">
+        <div className="space-y-8 pb-10">
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1>Budget Analyzer</h1>
-                    <p className="subtitle">Track your spending against monthly limits.</p>
+                    <h1 className="text-3xl font-semibold tracking-tight">Budget Analyzer</h1>
+                    <p className="mt-1.5 text-muted-foreground">Track your spending against monthly limits.</p>
                 </div>
-                <button className="edit-budget-btn" onClick={() => setShowModal(true)}>
-                    ✏ Edit Budget
+                <button 
+                    onClick={() => setShowModal(true)}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[var(--surface-3)] px-4 text-sm font-medium text-foreground transition-colors hover:bg-[var(--surface-2)] border border-[var(--border)]"
+                >
+                    <Edit2 className="size-4" />
+                    Edit Budget
                 </button>
-            </div>
+            </header>
 
             {analysis.length > 0 && (
-                <div className="budget-summary-block">
-                    <div className="budget-summary-card">
-                        <span>Total Budget</span>
-                        <h2>{formatCurrency(summary.totalBudget)}</h2>
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]">
+                        <span className="text-sm font-medium text-muted-foreground">Total Budget</span>
+                        <h2 className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-foreground">{formatCurrency(summary.totalBudget)}</h2>
                     </div>
-                    <div className="budget-summary-card">
-                        <span>Total Spent</span>
-                        <h2>{formatCurrency(summary.totalSpent)}</h2>
+                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]">
+                        <span className="text-sm font-medium text-muted-foreground">Total Spent</span>
+                        <h2 className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-foreground">{formatCurrency(summary.totalSpent)}</h2>
                     </div>
-                    <div className="budget-summary-card">
-                        <span>Remaining</span>
-                        <h2 className={summary.totalRemaining >= 0 ? "amount-credit" : "amount-debit"}>
+                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]">
+                        <span className="text-sm font-medium text-muted-foreground">Remaining</span>
+                        <h2 className={`mt-2 text-2xl font-bold tabular-nums tracking-tight ${summary.totalRemaining >= 0 ? "text-[var(--positive)]" : "text-[var(--negative)]"}`}>
                             {summary.totalRemaining >= 0 ? formatCurrency(summary.totalRemaining) : `-${formatCurrency(Math.abs(summary.totalRemaining))}`}
                         </h2>
                     </div>
-                    <div className="budget-summary-card">
-                        <span>Exceeded Categories</span>
-                        <h2 className={summary.exceededCount > 0 ? "amount-debit" : "amount-credit"}>
+                    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]">
+                        <span className="text-sm font-medium text-muted-foreground">Exceeded Categories</span>
+                        <h2 className={`mt-2 text-2xl font-bold tabular-nums tracking-tight ${summary.exceededCount > 0 ? "text-[var(--negative)]" : "text-[var(--positive)]"}`}>
                             {summary.exceededCount}
                         </h2>
                     </div>
@@ -136,71 +143,96 @@ export default function Budget() {
             )}
 
             {analysis.length === 0 ? (
-                <div style={{ padding: '40px 0' }}>
-                    <EmptyState 
-                        title="No Budget Established" 
-                        message="Take control of your finances by setting category-wise spending limits." 
-                        icon="🎯" 
-                        actionText="Create Budget"
-                        onAction={() => setShowModal(true)}
-                    />
-                </div>
+                <EmptyState 
+                    title="No Budget Established" 
+                    message="Take control of your finances by setting category-wise spending limits." 
+                    icon="🎯" 
+                    actionText="Create Budget"
+                    onAction={() => setShowModal(true)}
+                />
             ) : (
-                <div className="budget-grid">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
                     {analysis.map((item, index) => {
                         const isExceeded = item.status === "Exceeded";
                         const isWarning = item.status === "Near Limit";
-                        const statusClass = isExceeded ? "danger" : isWarning ? "warning" : "good";
                         const catBudget = budget[item.category] || item.budget;
+                        const pct = Math.min(item.percentage, 100);
+                        
+                        let StatusIcon = CheckCircle2;
+                        let statusBg = "bg-[var(--positive-soft)]";
+                        let statusText = "text-[var(--positive)]";
+                        let barColor = "bg-[var(--positive)]";
+                        
+                        if (isExceeded) {
+                            StatusIcon = XCircle;
+                            statusBg = "bg-[var(--negative-soft)]";
+                            statusText = "text-[var(--negative)]";
+                            barColor = "bg-[var(--negative)]";
+                        } else if (isWarning) {
+                            StatusIcon = AlertTriangle;
+                            statusBg = "bg-[var(--warning-soft)]";
+                            statusText = "text-[var(--warning)]";
+                            barColor = "bg-[var(--warning)]";
+                        }
                         
                         return (
-                            <div className="budget-card" key={index} tabIndex="0">
-                                <div className="budget-header">
-                                    <h3><span aria-hidden="true">{ICONS[item.category] || "💰"}</span> {formatCategory(item.category)}</h3>
-                                    <span className={`status-badge status-${statusClass}`}>{item.status}</span>
-                                </div>
-
-                                {/* Bug #3 Fix: Replace unreadable badge with readable stat rows */}
-                                <div className="budget-stat-rows">
-                                    <div className="budget-stat-row">
-                                        <span className="bsr-label">Budget</span>
-                                        <span className="bsr-value">{formatCurrency(catBudget)}</span>
+                            <div key={index} className="flex flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)] transition-colors hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-lift)]">
+                                <div className="p-5 flex-1">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xl">{ICONS[item.category] || "💰"}</span>
+                                            <h3 className="font-semibold text-foreground">{formatCategory(item.category)}</h3>
+                                        </div>
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${statusBg} ${statusText}`}>
+                                            <StatusIcon className="size-3" />
+                                            {item.status}
+                                        </span>
                                     </div>
-                                    <div className="budget-stat-row">
-                                        <span className="bsr-label">Spent</span>
-                                        <span className={`bsr-value ${isExceeded ? 'amount-debit' : ''}`}>{formatCurrency(item.spent)}</span>
+
+                                    <div className="mb-5 space-y-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">Budget</span>
+                                            <span className="font-medium text-foreground">{formatCurrency(catBudget)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">Spent</span>
+                                            <span className={`font-medium ${isExceeded ? 'text-[var(--negative)]' : 'text-foreground'}`}>{formatCurrency(item.spent)}</span>
+                                        </div>
+                                        {isExceeded ? (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-[var(--negative)] font-medium">Exceeded by</span>
+                                                <span className="font-medium text-[var(--negative)]">{formatCurrency(Math.abs(item.remaining))}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Remaining</span>
+                                                <span className="font-medium text-[var(--positive)]">{formatCurrency(item.remaining)}</span>
+                                            </div>
+                                        )}
                                     </div>
-                                    {isExceeded ? (
-                                        <div className="budget-stat-row">
-                                            <span className="bsr-label">Exceeded by</span>
-                                            <span className="bsr-value amount-debit">{formatCurrency(Math.abs(item.remaining))}</span>
-                                        </div>
-                                    ) : (
-                                        <div className="budget-stat-row">
-                                            <span className="bsr-label">Remaining</span>
-                                            <span className="bsr-value amount-credit">{formatCurrency(item.remaining)}</span>
-                                        </div>
-                                    )}
-                                </div>
 
-                                <div className="budget-progress">
-                                    <div
-                                        className={`budget-fill ${statusClass}`}
-                                        style={{ width: `${Math.min(item.percentage, 100)}%` }}
-                                    />
+                                    <div className="mb-1.5 flex justify-between text-xs font-medium text-muted-foreground">
+                                        <span>Progress</span>
+                                        <span>{item.percentage.toFixed(1)}%</span>
+                                    </div>
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-3)]">
+                                        <div 
+                                            className={`h-full rounded-full transition-all duration-500 ${barColor}`} 
+                                            style={{ width: `${pct}%` }} 
+                                        />
+                                    </div>
                                 </div>
-
-                                <div className="budget-footer">
-                                    <span>{item.percentage.toFixed(1)}% used</span>
-                                </div>
-
-                                {budgetInsights
-                                    .filter(i => i.category === item.category)
-                                    .map((i, idx) => (
-                                        <div key={idx} className="budget-tip">
-                                            💡 {i.message}
-                                        </div>
-                                    ))}
+                                
+                                {budgetInsights.filter(i => i.category === item.category).length > 0 && (
+                                    <div className="border-t border-[var(--border)] bg-[var(--surface-2)]/50 p-3">
+                                        {budgetInsights.filter(i => i.category === item.category).map((insight, idx) => (
+                                            <p key={idx} className="flex items-start gap-2 text-xs text-muted-foreground">
+                                                <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-[var(--accent)]" />
+                                                <span className="leading-relaxed">{insight.message}</span>
+                                            </p>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -214,6 +246,6 @@ export default function Budget() {
                     onClose={() => setShowModal(false)}
                 />
             )}
-        </>
+        </div>
     );
 }

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 _repo = TransactionRepository()
 
-def save_transactions(transactions: list[Transaction], statement_id: str):
+def save_transactions(transactions: list[Transaction], statement_id: str = "default"):
     """
     Adapter method to save transactions. 
     Requires statement_id which was added during the migration.

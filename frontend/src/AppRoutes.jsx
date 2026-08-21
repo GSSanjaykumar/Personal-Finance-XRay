@@ -13,6 +13,7 @@ import ChatAssistant from "./pages/ChatAssistant";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import Settings from "./pages/Settings";
 
 export default function AppRoutes() {
 
@@ -37,6 +38,7 @@ export default function AppRoutes() {
             <Route path="/forecast" element={<Forecast />} />
             <Route path="/report" element={<Report />} />
             <Route path="/chat" element={<ChatAssistant />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
 
