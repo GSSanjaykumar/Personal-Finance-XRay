@@ -61,10 +61,9 @@ SAMPLE_TXNS = [
 
 @pytest.fixture(autouse=True)
 def reset_stores():
-    save_transactions([])
+    """Reset budget store before every test (transactions are reset by conftest.isolate_test_user)."""
     save_budget(DEFAULT_BUDGET.copy())
     yield
-    save_transactions([])
     save_budget(DEFAULT_BUDGET.copy())
 
 
@@ -300,53 +299,53 @@ class TestReportService:
 # ── Integration tests: GET /report endpoint ───────────────────────────────────
 
 class TestReportEndpoint:
-    def test_returns_200_empty_store(self):
-        response = client.get("/report")
+    def test_returns_200_empty_store(self, auth_client):
+        response = auth_client.get("/report")
         assert response.status_code == 200
 
-    def test_content_type_pdf(self):
-        response = client.get("/report")
+    def test_content_type_pdf(self, auth_client):
+        response = auth_client.get("/report")
         assert response.headers["content-type"] == "application/pdf"
 
-    def test_content_disposition_attachment(self):
-        response = client.get("/report")
+    def test_content_disposition_attachment(self, auth_client):
+        response = auth_client.get("/report")
         cd = response.headers.get("content-disposition", "")
         assert "attachment" in cd
 
-    def test_filename_format(self):
+    def test_filename_format(self, auth_client):
         """Filename must be Financial_Report_YYYY-MM-DD.pdf"""
-        response = client.get("/report")
+        response = auth_client.get("/report")
         cd = response.headers.get("content-disposition", "")
         today = date.today().isoformat()
         assert f"Financial_Report_{today}.pdf" in cd
 
-    def test_response_is_valid_pdf(self):
-        response = client.get("/report")
+    def test_response_is_valid_pdf(self, auth_client):
+        response = auth_client.get("/report")
         assert response.content[:5] == b"%PDF-"
 
-    def test_eof_marker(self):
-        response = client.get("/report")
+    def test_eof_marker(self, auth_client):
+        response = auth_client.get("/report")
         assert b"%%EOF" in response.content
 
-    def test_content_length_header(self):
-        response = client.get("/report")
+    def test_content_length_header(self, auth_client):
+        response = auth_client.get("/report")
         # content-length should match actual bytes
         clen = int(response.headers.get("content-length", 0))
         assert clen == len(response.content)
 
-    def test_with_transactions(self):
+    def test_with_transactions(self, auth_client):
         save_transactions(SAMPLE_TXNS)
-        response = client.get("/report")
+        response = auth_client.get("/report")
         assert response.status_code == 200
         assert response.content[:5] == b"%PDF-"
 
-    def test_format_query_param_ignored_gracefully(self):
+    def test_format_query_param_ignored_gracefully(self, auth_client):
         """format=pdf is the default; any value still returns PDF."""
-        response = client.get("/report?format=pdf")
+        response = auth_client.get("/report?format=pdf")
         assert response.status_code == 200
         assert response.content[:5] == b"%PDF-"
 
-    def test_large_dataset(self):
+    def test_large_dataset(self, auth_client):
         """PDF generation must succeed with 200 transactions."""
         txns = [
             make_transaction(i, date(2025, 1, min(i % 28 + 1, 28)),
@@ -358,7 +357,7 @@ class TestReportEndpoint:
                                      100000.0, "Credit", "Employer", "Income"))
         save_transactions(txns)
 
-        response = client.get("/report")
+        response = auth_client.get("/report")
         assert response.status_code == 200
         assert response.content[:5] == b"%PDF-"
         assert len(response.content) > 10000

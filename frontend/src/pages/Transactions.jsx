@@ -1,63 +1,30 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import TransactionTable from "../components/ui/TransactionTable";
-import { getTransactions, uploadStatement } from "../api/financeApi";
+import { getTransactions } from "../api/financeApi";
 import Skeleton from "../components/ui/Skeleton";
 import ErrorState from "../components/ui/ErrorState";
 import EmptyState from "../components/ui/EmptyState";
 import Pagination from "../components/ui/Pagination";
-import { getDisplayMerchant } from "../utils/formatters";
-import { FileUp, FileText, X, Loader2 } from "lucide-react";
+import { getDisplayMerchant, formatCurrency, formatDate } from "../utils/formatters";
+import { FileUp, FileText, X, Loader2, ArrowDownLeft, ArrowUpRight, ShoppingCart, Wallet, Receipt } from "lucide-react";
 import { useToast } from "../components/v0-ui/toast";
+import { useStatementUpload } from "../hooks/useStatementUpload";
+import { motion } from "framer-motion";
+import { KpiCards } from "../components/v0-dashboard/kpi-cards";
+import { Reveal } from "../components/v0-ui/surface";
 
 export default function Transactions() {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const { toast } = useToast();
-    const [selectedFile, setSelectedFile] = useState(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const fileInputRef = useRef(null);
-
-    const handleFileSelect = (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        
-        if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith('.pdf')) {
-            toast({ tone: "warning", title: "Invalid File", description: "Please select a PDF bank statement." });
-            if (fileInputRef.current) fileInputRef.current.value = "";
-            return;
-        }
-        setSelectedFile(file);
-    };
-
-    const handleUpload = async () => {
-        if (!selectedFile) return;
-        
-        setIsUploading(true);
-        try {
-            const data = await uploadStatement(selectedFile);
-            toast({ 
-                tone: "success", 
-                title: "Statement uploaded successfully", 
-                description: `${data.transactions?.length || 0} transactions imported successfully.` 
-            });
-            setSelectedFile(null);
-            fetchData();
-        } catch (err) {
-            if (err.response?.status === 409) {
-                toast({ tone: "warning", title: "Duplicate Statement", description: "This statement has already been imported." });
-            } else if (err.response?.status === 400) {
-                toast({ tone: "error", title: "Unsupported Statement", description: "Finance X-Ray couldn't extract transactions from this statement." });
-            } else {
-                toast({ tone: "error", title: "Upload Failed", description: "An error occurred while uploading the statement." });
-            }
-        } finally {
-            setIsUploading(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-            }
-        }
-    };
+    const { 
+        selectedFile, 
+        isUploading, 
+        fileInputRef, 
+        handleFileSelect, 
+        handleUpload, 
+        resetSelection 
+    } = useStatementUpload({ onSuccess: () => fetchData() });
 
     // Filters
     const [search, setSearch] = useState("");
@@ -65,8 +32,9 @@ export default function Transactions() {
     const [type, setType] = useState("All");
     const [sortBy, setSortBy] = useState("Newest");
     
-    // Pagination
+    // Pagination & Modal
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedTxn, setSelectedTxn] = useState(null);
     const rowsPerPage = 20;
 
     const fetchData = useCallback(async () => {
@@ -86,7 +54,6 @@ export default function Transactions() {
         fetchData();
     }, [fetchData]);
 
-    // Reset pagination when filters change
     useEffect(() => {
         setCurrentPage(1);
     }, [search, category, type, sortBy]);
@@ -111,9 +78,9 @@ export default function Transactions() {
             .sort((a, b) => {
                 switch (sortBy) {
                     case "Highest Amount":
-                        return b.amount - a.amount;
+                        return Math.abs(b.amount) - Math.abs(a.amount);
                     case "Lowest Amount":
-                        return a.amount - b.amount;
+                        return Math.abs(a.amount) - Math.abs(b.amount);
                     case "Oldest":
                         return new Date(a.date) - new Date(b.date);
                     case "Newest":
@@ -123,19 +90,75 @@ export default function Transactions() {
             });
     }, [transactions, search, category, type, sortBy]);
 
-    // Pagination slice
+    const summaryKpis = useMemo(() => {
+        if (!transactions.length) return [];
+        let credits = 0;
+        let debits = 0;
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        transactions.forEach(t => {
+            if (t.transaction_type === "Credit" || t.amount > 0) {
+                credits += 1;
+                totalIncome += Math.abs(t.amount);
+            } else {
+                debits += 1;
+                totalExpense += Math.abs(t.amount);
+            }
+        });
+
+        return [
+            {
+                id: "net-worth",
+                label: "Total Income",
+                value: totalIncome,
+                prefix: "₹",
+                trend: []
+            },
+            {
+                id: "savings-rate",
+                label: "Total Expenses",
+                value: totalExpense,
+                prefix: "₹",
+                trend: []
+            },
+            {
+                id: "safe-to-spend",
+                label: "Credits",
+                value: credits,
+                trend: []
+            },
+            {
+                id: "health-score",
+                label: "Debits",
+                value: debits,
+                trend: []
+            }
+        ];
+    }, [transactions]);
+
     const totalPages = Math.ceil(filteredTransactions.length / rowsPerPage);
     const paginatedTransactions = filteredTransactions.slice(
         (currentPage - 1) * rowsPerPage,
         currentPage * rowsPerPage
     );
 
+    const getTxnIcon = (txn) => {
+        const isCredit = txn.transaction_type === "Credit" || txn.amount > 0;
+        if (isCredit) return ArrowDownLeft;
+        
+        const cat = (txn.category || "").toLowerCase();
+        if (cat.includes("shopping") || cat.includes("purchase")) return ShoppingCart;
+        if (cat.includes("transfer")) return Wallet;
+        return Receipt;
+    };
+
     return (
         <div className="space-y-6">
             <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-3xl font-semibold tracking-tight">Transactions</h1>
-                    <p className="mt-1.5 text-muted-foreground">View and search your complete transaction history.</p>
+                    <p className="mt-1.5 text-muted-foreground">Review and manage all your imported financial activity.</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -158,7 +181,7 @@ export default function Transactions() {
 
             {/* Upload State UI */}
             {selectedFile && (
-                <div className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="mb-6 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[var(--shadow-card)]">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[var(--accent)]">
                             <FileText className="h-5 w-5" />
@@ -174,7 +197,7 @@ export default function Transactions() {
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <button
-                            onClick={handleUpload}
+                            onClick={() => handleUpload()}
                             disabled={isUploading}
                             className="flex-1 sm:flex-none inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-medium text-white transition-colors hover:bg-[var(--accent)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -188,10 +211,7 @@ export default function Transactions() {
                             )}
                         </button>
                         <button
-                            onClick={() => {
-                                setSelectedFile(null);
-                                if (fileInputRef.current) fileInputRef.current.value = "";
-                            }}
+                            onClick={resetSelection}
                             disabled={isUploading}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border)] bg-transparent text-muted-foreground hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -201,48 +221,52 @@ export default function Transactions() {
                 </div>
             )}
             
-            <div className="mb-6 flex flex-wrap items-center gap-3">
-                    <input
-                        className="h-10 w-[240px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 text-sm outline-none transition-colors focus:border-[var(--accent)]"
-                        type="text"
-                        placeholder="Search merchant..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <select 
-                        value={category} 
-                        onChange={(e) => setCategory(e.target.value)} 
-                        className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 text-sm outline-none transition-colors focus:border-[var(--accent)]"
-                    >
-                        {categories.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                    </select>
-                    <select 
-                        value={type} 
-                        onChange={(e) => setType(e.target.value)} 
-                        className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 text-sm outline-none transition-colors focus:border-[var(--accent)]"
-                    >
-                        <option value="All">All Types</option>
-                        <option value="Credit">Credit</option>
-                        <option value="Debit">Debit</option>
-                    </select>
-                    <select 
-                        value={sortBy} 
-                        onChange={(e) => setSortBy(e.target.value)} 
-                        className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 text-sm outline-none transition-colors focus:border-[var(--accent)]"
-                    >
-                        <option value="Newest">Newest</option>
-                        <option value="Oldest">Oldest</option>
-                        <option value="Highest Amount">Highest Amount</option>
-                        <option value="Lowest Amount">Lowest Amount</option>
-                    </select>
-                </div>
+            {summaryKpis.length > 0 && !loading && !error && (
+                <KpiCards data={summaryKpis} />
+            )}
 
+            <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
+                <input
+                    className="h-10 w-[240px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 text-sm outline-none transition-colors focus:border-[var(--accent)]"
+                    type="text"
+                    placeholder="Search merchant..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+                <select 
+                    value={category} 
+                    onChange={(e) => setCategory(e.target.value)} 
+                    className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 text-sm outline-none transition-colors focus:border-[var(--accent)]"
+                >
+                    {categories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                </select>
+                <select 
+                    value={type} 
+                    onChange={(e) => setType(e.target.value)} 
+                    className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 text-sm outline-none transition-colors focus:border-[var(--accent)]"
+                >
+                    <option value="All">All Types</option>
+                    <option value="Credit">Credit</option>
+                    <option value="Debit">Debit</option>
+                </select>
+                <select 
+                    value={sortBy} 
+                    onChange={(e) => setSortBy(e.target.value)} 
+                    className="h-10 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 text-sm outline-none transition-colors focus:border-[var(--accent)]"
+                >
+                    <option value="Newest">Newest</option>
+                    <option value="Oldest">Oldest</option>
+                    <option value="Highest Amount">Highest Amount</option>
+                    <option value="Lowest Amount">Lowest Amount</option>
+                </select>
+            </div>
 
             {loading ? (
                 <div className="space-y-6">
-                    <Skeleton type="table" count={1} />
+                    <Skeleton type="grid" count={1} style={{ marginBottom: '32px' }} />
+                    <Skeleton type="card" count={1} style={{ height: '300px' }} />
                 </div>
             ) : error ? (
                 <ErrorState message={error} onRetry={fetchData} />
@@ -262,13 +286,125 @@ export default function Transactions() {
                     ) : null}
                 />
             ) : (
-                <div className="space-y-6">
-                    <TransactionTable transactions={paginatedTransactions} title={null} />
-                    <Pagination 
-                        currentPage={currentPage} 
-                        totalPages={totalPages} 
-                        onPageChange={setCurrentPage} 
-                    />
+                <Reveal className="h-full">
+                    <div className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
+                        <div className="flex-1 px-3 py-3">
+                            {paginatedTransactions.map((t, i) => {
+                                const isCredit = t.transaction_type === "Credit" || t.amount > 0;
+                                const displayMerchant = getDisplayMerchant(t.merchant_name || t.merchant, t.raw_description, t.description);
+                                const Icon = getTxnIcon(t);
+
+                                return (
+                                    <motion.button
+                                        key={t.id || i}
+                                        initial={{ opacity: 0, y: 8 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: (i % rowsPerPage) * 0.03 }}
+                                        onClick={() => setSelectedTxn(t)}
+                                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors duration-200 hover:bg-[var(--surface-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                                    >
+                                        <span
+                                            className="flex size-10 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105"
+                                            style={{
+                                                background: isCredit ? "var(--positive-soft)" : "var(--surface-3)",
+                                                color: isCredit ? "var(--positive)" : "var(--muted)",
+                                            }}
+                                        >
+                                            <Icon className="size-[18px]" />
+                                        </span>
+
+                                        <span className="min-w-0 flex-1">
+                                            <span className="flex items-center gap-2">
+                                                <span className="truncate text-sm font-medium text-foreground">{displayMerchant}</span>
+                                            </span>
+                                            <span className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                                                <span className="rounded-md bg-[var(--surface-3)] px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                                    {t.category || "Uncategorized"}
+                                                </span>
+                                                {formatDate(t.date)}
+                                            </span>
+                                        </span>
+
+                                        <span className="text-right">
+                                            <span
+                                                className="tabular block text-sm font-semibold"
+                                                style={{ color: isCredit ? "var(--positive)" : "var(--foreground)" }}
+                                            >
+                                                {isCredit ? "+" : "-"}{formatCurrency(Math.abs(t.amount))}
+                                            </span>
+                                            <span className="mt-0.5 block text-xs text-muted-foreground">{t.transaction_type}</span>
+                                        </span>
+                                        <ArrowUpRight className="size-4 -translate-x-1 text-subtle opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
+                                    </motion.button>
+                                );
+                            })}
+                        </div>
+                        <Pagination 
+                            currentPage={currentPage} 
+                            totalPages={totalPages} 
+                            onPageChange={setCurrentPage} 
+                        />
+                    </div>
+                </Reveal>
+            )}
+
+            {/* Transaction Detail Drawer / Modal */}
+            {selectedTxn && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+                    onClick={() => setSelectedTxn(null)}
+                >
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl" 
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="mb-6 flex items-center justify-between">
+                            <h2 className="text-xl font-semibold tracking-tight">Transaction Details</h2>
+                            <button 
+                                className="rounded-md p-1.5 text-muted-foreground hover:bg-[var(--surface-2)] hover:text-foreground transition-colors"
+                                onClick={() => setSelectedTxn(null)} 
+                                aria-label="Close modal"
+                            >
+                                <X className="size-5" />
+                            </button>
+                        </div>
+                        <div className="space-y-4">
+                            <div className="flex justify-between border-b border-[var(--border)] pb-3">
+                                <span className="text-muted-foreground">Date</span>
+                                <strong className="font-medium">{formatDate(selectedTxn.date)}</strong>
+                            </div>
+                            <div className="flex justify-between border-b border-[var(--border)] pb-3">
+                                <span className="text-muted-foreground">Merchant</span>
+                                <strong className="font-medium">{getDisplayMerchant(selectedTxn.merchant_name || selectedTxn.merchant, selectedTxn.raw_description, selectedTxn.description)}</strong>
+                            </div>
+                            <div className="flex justify-between border-b border-[var(--border)] pb-3">
+                                <span className="text-muted-foreground">Category</span>
+                                <strong className="font-medium">{selectedTxn.category}</strong>
+                            </div>
+                            <div className="flex justify-between border-b border-[var(--border)] pb-3">
+                                <span className="text-muted-foreground">Description</span>
+                                <strong className="max-w-[200px] text-right font-medium text-pretty">{selectedTxn.description || selectedTxn.raw_description}</strong>
+                            </div>
+                            <div className="flex justify-between pb-1">
+                                <span className="text-muted-foreground">Amount</span>
+                                <strong className={`font-semibold tabular-nums ${selectedTxn.transaction_type === "Credit" || selectedTxn.amount > 0 ? "text-[var(--positive)]" : "text-foreground"}`}>
+                                    {selectedTxn.transaction_type === "Credit" || selectedTxn.amount > 0 ? "+" : "-"}{formatCurrency(Math.abs(selectedTxn.amount))}
+                                </strong>
+                            </div>
+                            <div className="flex justify-between pb-1">
+                                <span className="text-muted-foreground">Type</span>
+                                <strong className="font-medium">{selectedTxn.transaction_type}</strong>
+                            </div>
+                            <div className="flex justify-between pb-1">
+                                <span className="text-muted-foreground">Account</span>
+                                <strong className="font-medium">{selectedTxn.account_id || "Main Account"}</strong>
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
             )}
         </div>

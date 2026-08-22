@@ -3,12 +3,16 @@ import { getDashboard, getTransactions } from "../api/financeApi";
 import Skeleton from "../components/ui/Skeleton";
 import ErrorState from "../components/ui/ErrorState";
 import { formatCurrency, getDisplayMerchant } from "../utils/formatters";
+import { Store, Receipt, CalendarDays, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 // Vercel UI components
 import { KpiCards } from "../components/v0-dashboard/kpi-cards";
 import { CashflowChart } from "../components/v0-dashboard/cashflow-chart";
 import { SpendDonut } from "../components/v0-dashboard/spend-donut";
-import { kpis as mockKpis } from "../v0-lib/data";
+import { Reveal } from "../components/v0-ui/surface";
+import EmptyState from "../components/ui/EmptyState";
+
 
 export default function Analytics() {
     const [dashboard, setDashboard] = useState(null);
@@ -101,8 +105,7 @@ export default function Analytics() {
                 label: "Total Income",
                 value: dashboard.summary.total_income || 0,
                 prefix: "₹",
-                positive: true,
-                trend: mockKpis[0].trend,
+                trend: [],
             },
             {
                 id: "safe-to-spend",
@@ -110,7 +113,7 @@ export default function Analytics() {
                 value: dashboard.summary.total_expense || 0,
                 prefix: "₹",
                 positive: false,
-                trend: mockKpis[2].trend,
+                trend: [],
             },
             {
                 id: "health-score",
@@ -118,7 +121,7 @@ export default function Analytics() {
                 value: dashboard.summary.transaction_count || 0,
                 delta: "",
                 positive: true,
-                trend: mockKpis[3].trend,
+                trend: [],
             },
         ];
 
@@ -136,10 +139,25 @@ export default function Analytics() {
     );
     if (error) return <ErrorState message={error} onRetry={fetchData} />;
 
+    const isEmpty = !dashboard || dashboard?.summary?.transaction_count === 0;
+
+    if (isEmpty) {
+        return (
+            <EmptyState
+                title="No Analytics Data"
+                message="Upload your bank statement PDF to view your detailed analytics and spending trends."
+                icon="📊"
+            />
+        );
+    }
+
     return (
         <div className="space-y-6">
             <header className="mb-6">
-                <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-subtle">
+                    {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight">Analytics</h1>
                 <p className="mt-1.5 text-muted-foreground">Deep dive into your financial data.</p>
             </header>
 
@@ -151,99 +169,132 @@ export default function Analytics() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
-                    <h3 className="mb-4 text-lg font-semibold">Top 10 Merchants</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-[var(--border)] text-left text-muted-foreground">
-                                    <th className="pb-3 font-medium">Merchant</th>
-                                    <th className="pb-3 text-right font-medium">Total Spend</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {topMerchants.map((m, i) => {
-                                    const displayMerchant = getDisplayMerchant(m.name);
-                                    return (
-                                        <tr key={i} className="group border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]">
-                                            <td className="py-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-xs font-semibold text-[var(--accent)]">
-                                                        {displayMerchant.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <span className="font-medium">{displayMerchant}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-3 text-right tabular-nums text-[var(--negative)]">
-                                                {formatCurrency(m.amount)}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                <Reveal delay={0.1} className="h-full">
+                    <div className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
+                        <div className="flex items-start justify-between p-6 pb-4">
+                            <div>
+                                <h2 className="text-base font-semibold">Top Merchants</h2>
+                                <p className="mt-0.5 text-sm text-muted-foreground">Highest spending destinations</p>
+                            </div>
+                        </div>
+                        <div className="flex-1 px-3 pb-3">
+                            {topMerchants.map((m, i) => {
+                                const displayMerchant = getDisplayMerchant(m.name);
+                                return (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, y: 8 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: i * 0.05 }}
+                                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors duration-200 hover:bg-[var(--surface-2)]"
+                                    >
+                                        <span className="flex size-10 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105" style={{ background: "var(--surface-3)", color: "var(--muted)" }}>
+                                            <Store className="size-[18px]" />
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="truncate text-sm font-medium text-foreground">{displayMerchant}</span>
+                                        </span>
+                                        <span className="text-right">
+                                            <span className="tabular block text-sm font-semibold text-[var(--negative)]">
+                                                -{formatCurrency(m.amount)}
+                                            </span>
+                                        </span>
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
+                </Reveal>
 
-                <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
-                    <h3 className="mb-4 text-lg font-semibold">Largest Expenses</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-[var(--border)] text-left text-muted-foreground">
-                                    <th className="pb-3 font-medium">Date</th>
-                                    <th className="pb-3 font-medium">Merchant</th>
-                                    <th className="pb-3 text-right font-medium">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {largestExpenses.map((txn, i) => {
-                                    const displayMerchant = getDisplayMerchant(txn.merchant_name || txn.merchant, txn.raw_description, txn.description);
-                                    return (
-                                        <tr key={i} className="group border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]">
-                                            <td className="py-3 text-muted-foreground">
+                <Reveal delay={0.2} className="h-full">
+                    <div className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
+                        <div className="flex items-start justify-between p-6 pb-4">
+                            <div>
+                                <h2 className="text-base font-semibold">Largest Expenses</h2>
+                                <p className="mt-0.5 text-sm text-muted-foreground">Highest single transactions</p>
+                            </div>
+                        </div>
+                        <div className="flex-1 px-3 pb-3">
+                            {largestExpenses.map((txn, i) => {
+                                const displayMerchant = getDisplayMerchant(txn.merchant_name || txn.merchant, txn.raw_description, txn.description);
+                                return (
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, y: 8 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        viewport={{ once: true }}
+                                        transition={{ delay: i * 0.05 }}
+                                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors duration-200 hover:bg-[var(--surface-2)]"
+                                    >
+                                        <span className="flex size-10 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105" style={{ background: "var(--surface-3)", color: "var(--muted)" }}>
+                                            <Receipt className="size-[18px]" />
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="truncate text-sm font-medium text-foreground">{displayMerchant}</span>
+                                            <span className="mt-1 block text-xs text-muted-foreground">
                                                 {new Date(txn.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
-                                            </td>
-                                            <td className="py-3 font-medium">{displayMerchant}</td>
-                                            <td className="py-3 text-right tabular-nums text-[var(--negative)]">
-                                                {formatCurrency(Math.abs(txn.amount))}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                            </span>
+                                        </span>
+                                        <span className="text-right">
+                                            <span className="tabular block text-sm font-semibold text-[var(--negative)]">
+                                                -{formatCurrency(Math.abs(txn.amount))}
+                                            </span>
+                                        </span>
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
+                </Reveal>
             </div>
 
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card)]">
-                <h3 className="mb-4 text-lg font-semibold">Monthly Summary</h3>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-[var(--border)] text-left text-muted-foreground">
-                                <th className="pb-3 font-medium">Month</th>
-                                <th className="pb-3 font-medium">Income</th>
-                                <th className="pb-3 font-medium">Expense</th>
-                                <th className="pb-3 text-right font-medium">Net</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {monthlyData.map((m, i) => (
-                                <tr key={i} className="group border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]">
-                                    <td className="py-3 font-medium">{m.month}</td>
-                                    <td className="py-3 tabular-nums text-[var(--positive)]">+{formatCurrency(m.rawIncome)}</td>
-                                    <td className="py-3 tabular-nums text-[var(--negative)]">-{formatCurrency(m.rawExpense)}</td>
-                                    <td className={`py-3 text-right tabular-nums ${m.rawIncome - m.rawExpense >= 0 ? "text-[var(--positive)]" : "text-[var(--negative)]"}`}>
-                                        {m.rawIncome - m.rawExpense >= 0 ? "+" : "-"}{formatCurrency(Math.abs(m.rawIncome - m.rawExpense))}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            <Reveal delay={0.3} className="h-full">
+                <div className="flex h-full flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
+                    <div className="flex items-start justify-between p-6 pb-4">
+                        <div>
+                            <h2 className="text-base font-semibold">Monthly Summary</h2>
+                            <p className="mt-0.5 text-sm text-muted-foreground">Income vs Expense breakdown</p>
+                        </div>
+                    </div>
+                    <div className="flex-1 px-3 pb-3">
+                        {monthlyData.map((m, i) => {
+                            const isPositive = m.rawIncome - m.rawExpense >= 0;
+                            return (
+                                <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, y: 8 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: i * 0.05 }}
+                                    className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors duration-200 hover:bg-[var(--surface-2)]"
+                                >
+                                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:scale-105" style={{ background: "var(--surface-3)", color: "var(--muted)" }}>
+                                        <CalendarDays className="size-[18px]" />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="truncate text-sm font-medium text-foreground">{m.month}</span>
+                                        <span className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <ArrowUpRight className="size-3 text-[var(--positive)]" /> {formatCurrency(m.rawIncome)}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <ArrowDownRight className="size-3 text-[var(--negative)]" /> {formatCurrency(m.rawExpense)}
+                                            </span>
+                                        </span>
+                                    </span>
+                                    <span className="text-right">
+                                        <span className="tabular block text-sm font-semibold" style={{ color: isPositive ? "var(--positive)" : "var(--negative)" }}>
+                                            {isPositive ? "+" : "-"}{formatCurrency(Math.abs(m.rawIncome - m.rawExpense))}
+                                        </span>
+                                        <span className="mt-1 block text-xs text-muted-foreground">Net Savings</span>
+                                    </span>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
+            </Reveal>
         </div>
     );
 }

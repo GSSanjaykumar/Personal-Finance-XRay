@@ -36,6 +36,7 @@ from parsers.schema import Transaction
 client = TestClient(app)
 
 
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def make_transaction(
@@ -61,16 +62,15 @@ def make_transaction(
     )
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
+# ── Fixtures ─────────────────────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
 def reset_stores():
-    """Reset both in-memory stores before every test."""
-    save_transactions([])
+    """Reset budget store before every test (transactions are reset by conftest.isolate_test_user)."""
     save_budget(DEFAULT_BUDGET.copy())
     yield
-    save_transactions([])
     save_budget(DEFAULT_BUDGET.copy())
+
 
 
 # Reference date: 15th of January 2025 (mid-month, 31-day month)
@@ -430,25 +430,25 @@ class TestForecastService:
 # ── Integration tests: GET /forecast endpoint ────────────────────────────────
 
 class TestForecastEndpoint:
-    def test_returns_200_empty_store(self):
-        response = client.get("/forecast")
+    def test_returns_200_empty_store(self, auth_client):
+        response = auth_client.get("/forecast")
         assert response.status_code == 200
 
-    def test_empty_store_shape(self):
-        response = client.get("/forecast")
+    def test_empty_store_shape(self, auth_client):
+        response = auth_client.get("/forecast")
         body = response.json()
         for key in ["current_month", "forecast", "daily_average", "cashflow_prediction"]:
             assert key in body
 
-    def test_empty_store_zeros(self):
-        response = client.get("/forecast")
+    def test_empty_store_zeros(self, auth_client):
+        response = auth_client.get("/forecast")
         body = response.json()
         assert body["current_month"]["income"] == 0.0
         assert body["daily_average"] == 0.0
         assert body["forecast"]["budget_risk"] == "Low"
 
-    def test_forecast_shape_keys(self):
-        response = client.get("/forecast")
+    def test_forecast_shape_keys(self, auth_client):
+        response = auth_client.get("/forecast")
         fc = response.json()["forecast"]
         for key in [
             "projected_month_end_expense",
@@ -459,7 +459,7 @@ class TestForecastEndpoint:
         ]:
             assert key in fc
 
-    def test_budget_risk_valid_values(self):
-        response = client.get("/forecast")
+    def test_budget_risk_valid_values(self, auth_client):
+        response = auth_client.get("/forecast")
         risk = response.json()["forecast"]["budget_risk"]
         assert risk in {"Low", "Medium", "High"}

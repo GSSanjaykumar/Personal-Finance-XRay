@@ -63,7 +63,7 @@ export function KpiCards({ data = kpis }: { data?: any }) {
                 )}
               </div>
               <div className="opacity-90 transition-opacity duration-200 group-hover:opacity-100">
-                <Sparkline data={[...k.trend]} />
+                {k.trend?.length > 0 && <Sparkline data={[...k.trend]} />}
               </div>
             </div>
           </motion.button>

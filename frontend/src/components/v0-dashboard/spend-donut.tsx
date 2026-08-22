@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
 import { Reveal } from "@/components/v0-ui/surface"
-import { spendBreakdown } from "@/v0-lib/data"
+// import { spendBreakdown } from "@/v0-lib/data"
 import { useToast } from "@/components/v0-ui/toast"
 import { cn } from "@/v0-lib/utils"
 
@@ -60,7 +60,7 @@ export function SpendDonut({ data = [] }: { data?: any }) {
         </div>
 
         <div className="mt-6 space-y-1">
-          {spendBreakdown.map((s, i) => (
+          {data.map((s, i) => (
             <button
               key={s.name}
               onMouseEnter={() => setActiveIndex(i)}
@@ -77,7 +77,7 @@ export function SpendDonut({ data = [] }: { data?: any }) {
               <span className="flex-1 text-sm text-foreground">{s.name}</span>
               <span className="tabular w-10 text-right text-xs text-muted-foreground">{s.pct}%</span>
               <span className="tabular w-16 text-right text-sm font-medium text-foreground">
-                ${s.amount.toLocaleString("en-US")}
+                ₹{s.amount.toLocaleString("en-IN")}
               </span>
             </button>
           ))}

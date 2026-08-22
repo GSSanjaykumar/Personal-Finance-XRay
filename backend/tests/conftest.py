@@ -5,10 +5,10 @@ from unittest.mock import patch
 from backend.database.connection import MongoDBConnection
 
 @pytest.fixture(autouse=True)
-def setup_env():
-    os.environ['MONGODB_URI'] = "mongodb://localhost:27017"
-    os.environ['DATABASE_NAME'] = "test_db"
-    os.environ['GEMINI_API_KEY'] = "dummy"
+def setup_env(monkeypatch):
+    monkeypatch.setenv('MONGODB_URI', "mongodb://localhost:27017")
+    monkeypatch.setenv('DATABASE_NAME', "test_db")
+    monkeypatch.setenv('GEMINI_API_KEY', "dummy")
     yield
     MongoDBConnection._instance = None
 

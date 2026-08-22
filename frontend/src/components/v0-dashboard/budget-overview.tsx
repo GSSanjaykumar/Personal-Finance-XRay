@@ -13,8 +13,8 @@ const statusMap = {
 export function BudgetOverview({ data = budgets }: { data?: any }) {
   const { toast } = useToast()
   const totalUsed = data.reduce((a, b) => a + b.used, 0)
-  const totalBudget = 7700
-  const remaining = totalBudget - totalUsed
+  const totalBudget = data.reduce((a, b) => a + b.total, 0) || 1
+  const remaining = Math.max(totalBudget - totalUsed, 0)
 
   return (
     <Reveal className="h-full">
@@ -23,11 +23,11 @@ export function BudgetOverview({ data = budgets }: { data?: any }) {
           <div>
             <h2 className="text-base font-semibold">Budget Overview</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              ${totalUsed.toLocaleString("en-US")} of ${totalBudget.toLocaleString("en-US")} used
+              ₹{totalUsed.toLocaleString("en-IN")} of ₹{totalBudget.toLocaleString("en-IN")} used
             </p>
           </div>
           <div className="text-right">
-            <p className="tabular text-2xl font-semibold tracking-tight">${remaining.toLocaleString("en-US")}</p>
+            <p className="tabular text-2xl font-semibold tracking-tight">₹{remaining.toLocaleString("en-IN")}</p>
             <p className="text-xs text-muted-foreground">remaining</p>
           </div>
         </div>
@@ -49,8 +49,8 @@ export function BudgetOverview({ data = budgets }: { data?: any }) {
                     </span>
                   </div>
                   <span className="tabular text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">${b.used.toLocaleString("en-US")}</span> / $
-                    {b.total.toLocaleString("en-US")}
+                    <span className="font-medium text-foreground">₹{b.used.toLocaleString("en-IN")}</span> / ₹
+                    {b.total.toLocaleString("en-IN")}
                   </span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--surface-3)]">
@@ -73,7 +73,7 @@ export function BudgetOverview({ data = budgets }: { data?: any }) {
             toast({
               tone: "info",
               title: "AI budget optimizer",
-              description: "Reallocating $240 from Dining to Savings keeps every category on track.",
+              description: "Ask the AI assistant for personalized budget reallocation strategies.",
             })
           }
           className="mt-6 inline-flex items-center gap-1.5 self-start text-sm font-medium text-[var(--accent)] transition-opacity hover:opacity-80"

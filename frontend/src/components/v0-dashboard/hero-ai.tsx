@@ -21,7 +21,7 @@ export function HeroAI({ insights = [], totalSavings = 0, totalExpense = 0 }) {
       toast({
         tone: "success",
         title: "Recommendation applied",
-        description: "We adjusted your dining budget and paused 2 subscriptions. +$420/mo runway.",
+        description: "We adjusted your dining budget and paused 2 subscriptions. Your insights have been applied.",
       })
     }, 1400)
   }

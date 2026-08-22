@@ -13,7 +13,7 @@ import { SpendDonut } from "../components/v0-dashboard/spend-donut";
 import { BudgetOverview } from "../components/v0-dashboard/budget-overview";
 import { RecurringPayments } from "../components/v0-dashboard/recurring-payments";
 
-import { kpis as mockKpis, forecast as mockForecast, transactions as mockTxns, incomeExpense as mockIE, spendBreakdown as mockSB, budgets as mockB, recurring as mockR } from "../v0-lib/data";
+import { kpis as mockKpis } from "../v0-lib/data";
 
 import Skeleton from "../components/ui/Skeleton";
 import ErrorState from "../components/ui/ErrorState";
@@ -139,7 +139,7 @@ export default function Dashboard() {
     const mappedForecast = forecastData?.monthly_spending?.length > 0 ? forecastData.monthly_spending.map(f => ({
         month: new Date(f.month).toLocaleDateString('en-US', { month: 'short' }),
         value: f.amount / 1000 // scaling to K for chart readability
-    })) : mockForecast;
+    })) : [];
 
     // Map Income vs Expense from transactionsData
     let mappedIE = [];
@@ -165,7 +165,7 @@ export default function Dashboard() {
                 expense: m.expense / 1000
             }));
     } else {
-        mappedIE = mockIE;
+        mappedIE = [];
     }
 
     // Map Spend Donut from transactionsData
@@ -188,7 +188,7 @@ export default function Dashboard() {
             .sort((a, b) => b.amount - a.amount)
             .slice(0, 5);
     } else {
-        mappedDonut = mockSB;
+        mappedDonut = [];
     }
 
     // Map Budgets
@@ -197,7 +197,7 @@ export default function Dashboard() {
         used: b.spent,
         total: b.allocated,
         status: b.spent > b.allocated ? "over" : (b.spent > b.allocated * 0.8 ? "watch" : "ontrack")
-    })) : mockB;
+    })) : [];
 
     // Map Recurring
     const mappedRecurring = data.recurring?.length > 0 ? data.recurring.map((r, i) => ({

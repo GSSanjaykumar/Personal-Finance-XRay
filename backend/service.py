@@ -55,7 +55,12 @@ class FinanceService:
 
         # 3. Parse Transactions
         parse_start = time.perf_counter()
-        transactions = self.parser.read_pdf(pdf_path)
+        try:
+            transactions = self.parser.read_pdf(pdf_path)
+        except ValueError as ve:
+            logger.warning(f"PDF Parsing Failed: {str(ve)}")
+            raise HTTPException(status_code=400, detail=str(ve))
+            
         parse_time = time.perf_counter() - parse_start
         logger.info(f"Parsed PDF {filename} in {parse_time:.4f}s")
 

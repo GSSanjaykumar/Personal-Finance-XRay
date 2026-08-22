@@ -15,7 +15,7 @@ function ChartTooltip({ active, payload, label }: any) {
         <p key={p.dataKey} className="flex items-center gap-2 text-xs">
           <span className="size-2 rounded-full" style={{ background: p.color }} />
           <span className="capitalize text-muted-foreground">{p.dataKey}</span>
-          <span className="tabular ml-auto font-semibold text-foreground">${p.value}k</span>
+          <span className="tabular ml-auto font-semibold text-foreground">₹{p.value}k</span>
         </p>
       ))}
     </div>

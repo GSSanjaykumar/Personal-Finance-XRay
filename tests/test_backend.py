@@ -6,7 +6,9 @@ from backend.budget import analyze_budget
 from parsers.schema import Transaction
 from datetime import datetime
 
+# Unauthenticated client (for public endpoints like /health)
 client = TestClient(app)
+
 
 @pytest.fixture
 def sample_health_transactions():
@@ -22,6 +24,7 @@ def sample_health_transactions():
     )
     return [t1, t2]
 
+
 def test_calculate_financial_health(sample_health_transactions):
     health = calculate_financial_health(sample_health_transactions)
     assert health["income"] == 1000.0
@@ -30,37 +33,54 @@ def test_calculate_financial_health(sample_health_transactions):
     assert health["score"] == 100
     assert health["category_totals"]["Food"] == 200.0
 
+
 def test_analyze_budget():
     category_totals = {"Food": 12000.0, "Entertainment": 5000.0}
     # default budget is 10000
     result = analyze_budget(category_totals)
     food_budget = next(b for b in result if b["category"] == "Food")
     ent_budget = next(b for b in result if b["category"] == "Entertainment")
-    
+
     assert food_budget["status"] == "Exceeded"
     assert food_budget["percentage"] == 120.0
-    
+
     assert ent_budget["status"] == "Within Budget"
     assert ent_budget["percentage"] == 50.0
 
+
 def test_health_endpoint():
+    """
+    /health is a public endpoint.
+    Current production contract:
+      - status: "healthy" (when DB connected) or "degraded"
+      - database: "connected" | "disconnected"
+      - ai_router: "ready"
+      - version: "1.0"
+    """
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "running", "project": "Personal Finance X-Ray"}
+    body = response.json()
+    assert body["status"] in {"healthy", "degraded"}
+    assert body["database"] in {"connected", "disconnected"}
+    assert body["ai_router"] == "ready"
+    assert body["version"] == "1.0"
 
-def test_budget_endpoints():
+
+def test_budget_endpoints(auth_client):
+    """PUT /budget and GET /budget require authentication."""
     budget_data = {"Food": 5000, "Rent": 20000}
-    response = client.put("/budget", json=budget_data)
+    response = auth_client.put("/budget", json=budget_data)
     assert response.status_code == 200
     assert response.json()["message"] == "Budget updated successfully"
     assert response.json()["budget"] == budget_data
 
-    response = client.get("/budget")
+    response = auth_client.get("/budget")
     assert response.status_code == 200
     assert response.json() == budget_data
 
-def test_recurring_endpoint():
-    """GET /recurring should return 200 with a list (empty if no uploads)."""
-    response = client.get("/recurring")
+
+def test_recurring_endpoint(auth_client):
+    """GET /recurring should return 200 with a list (empty when no uploads)."""
+    response = auth_client.get("/recurring")
     assert response.status_code == 200
     assert isinstance(response.json(), list)

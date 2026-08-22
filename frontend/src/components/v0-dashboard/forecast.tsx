@@ -9,7 +9,7 @@ function ChartTooltip({ active, payload, label }: any) {
   return (
     <div className="rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2 shadow-[var(--shadow-lift)]">
       <p className="text-[11px] font-medium uppercase tracking-wider text-subtle">{label}</p>
-      <p className="tabular text-sm font-semibold text-foreground">${payload[0].value}k</p>
+      <p className="tabular text-sm font-semibold text-foreground">₹{payload[0].value}k</p>
       <p className="text-[11px] text-muted-foreground">projected net worth</p>
     </div>
   )

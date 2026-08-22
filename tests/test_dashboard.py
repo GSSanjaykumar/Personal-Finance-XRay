@@ -18,19 +18,9 @@ from backend.transaction_store import save_transactions, get_transactions
 from parsers.schema import Transaction
 
 
-# ── Shared test client ────────────────────────────────────────────────────────
-
-client = TestClient(app)
-
-
 # ── Fixtures ─────────────────────────────────────────────────────────────────
-
-@pytest.fixture(autouse=True)
-def clear_store():
-    """Reset the in-memory transaction store before every test."""
-    save_transactions([])
-    yield
-    save_transactions([])
+# Note: store isolation (clear_test_user_data) and UserContext setup are
+# handled by the session-scoped `isolate_test_user` autouse fixture in conftest.py.
 
 
 @pytest.fixture
@@ -259,28 +249,28 @@ class TestDashboardServiceWithData:
 class TestDashboardEndpoint:
     """HTTP integration tests for GET /dashboard."""
 
-    def test_returns_200_empty_store(self):
-        response = client.get("/dashboard")
+    def test_returns_200_empty_store(self, auth_client):
+        response = auth_client.get("/dashboard")
         assert response.status_code == 200
 
-    def test_empty_store_response_shape(self):
-        response = client.get("/dashboard")
+    def test_empty_store_response_shape(self, auth_client):
+        response = auth_client.get("/dashboard")
         body = response.json()
         for key in ["summary", "financial_health", "budget", "analytics",
                     "recurring", "insights", "recent_transactions"]:
             assert key in body, f"Missing key: {key}"
 
-    def test_empty_store_summary_zeros(self):
-        response = client.get("/dashboard")
+    def test_empty_store_summary_zeros(self, auth_client):
+        response = auth_client.get("/dashboard")
         summary = response.json()["summary"]
         assert summary["total_income"] == 0.0
         assert summary["total_expense"] == 0.0
         assert summary["savings"] == 0.0
         assert summary["transaction_count"] == 0
 
-    def test_with_data_returns_populated_response(self, sample_transactions):
+    def test_with_data_returns_populated_response(self, auth_client, sample_transactions):
         save_transactions(sample_transactions)
-        response = client.get("/dashboard")
+        response = auth_client.get("/dashboard")
         assert response.status_code == 200
         body = response.json()
 
@@ -289,17 +279,17 @@ class TestDashboardEndpoint:
         assert len(body["recent_transactions"]) == 3
         assert len(body["insights"]) > 0
 
-    def test_endpoint_returns_list_for_recurring(self, sample_transactions):
+    def test_endpoint_returns_list_for_recurring(self, auth_client, sample_transactions):
         save_transactions(sample_transactions)
-        response = client.get("/dashboard")
+        response = auth_client.get("/dashboard")
         assert isinstance(response.json()["recurring"], list)
 
-    def test_endpoint_returns_list_for_budget(self, sample_transactions):
+    def test_endpoint_returns_list_for_budget(self, auth_client, sample_transactions):
         save_transactions(sample_transactions)
-        response = client.get("/dashboard")
+        response = auth_client.get("/dashboard")
         assert isinstance(response.json()["budget"], list)
 
-    def test_recent_transactions_is_list(self, sample_transactions):
+    def test_recent_transactions_is_list(self, auth_client, sample_transactions):
         save_transactions(sample_transactions)
-        response = client.get("/dashboard")
+        response = auth_client.get("/dashboard")
         assert isinstance(response.json()["recent_transactions"], list)

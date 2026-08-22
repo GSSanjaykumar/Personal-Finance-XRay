@@ -15,7 +15,7 @@ export function RecurringPayments({ data = recurring }: { data?: any }) {
           <div>
             <h2 className="text-base font-semibold">Recurring Payments</h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              ${monthly.toLocaleString("en-US", { minimumFractionDigits: 2 })}/mo across {recurring.length} subscriptions
+              ₹{monthly.toLocaleString("en-IN", { minimumFractionDigits: 2 })}/mo across {data.length} subscriptions
             </p>
           </div>
           <button
@@ -51,7 +51,7 @@ export function RecurringPayments({ data = recurring }: { data?: any }) {
                 </span>
               </span>
               <span className="tabular text-sm font-semibold">
-                ${r.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                ₹{r.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
             </motion.button>
           ))}
