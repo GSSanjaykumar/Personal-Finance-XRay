@@ -25,19 +25,19 @@ class ForecastService:
     def __init__(self):
         self._forecaster = SpendingForecast()
 
-    def get_forecast(self) -> dict:
+    def get_forecast(self, user_id: str) -> dict:
         """
         Produce the full forecast response.
 
         Returns a safe zero-valued structure when the transaction store
         is empty — never raises an exception.
         """
-        transactions = get_transactions()
+        transactions = get_transactions(user_id)
 
         if not transactions:
             return self._empty_response()
 
-        return self._forecaster.forecast(transactions)
+        return self._forecaster.forecast(user_id, transactions)
 
     # ------------------------------------------------------------------
     # Private helpers

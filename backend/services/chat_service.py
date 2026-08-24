@@ -25,8 +25,6 @@ from backend.services.financial_context import build_context
 from backend.services.prompt_builder import build_prompt
 from backend.services.ai.router import AIRouter
 from backend.repositories.chat_repository import ChatRepository
-from backend.auth.user_context import UserContext
-
 logger = logging.getLogger(__name__)
 
 # ── Lazy Router initialisation ────────────────────────────────────────────────
@@ -42,6 +40,7 @@ def _get_router():
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def handle_chat(
+    user_id: str,
     message: str,
     history: list[dict] | None = None,
 ) -> dict:
@@ -59,7 +58,7 @@ def handle_chat(
     logger.debug("Classified intent: %s (confidence: %.2f) Entities: %s", intent, confidence, entities)
 
     # ── 2. Build financial context ────────────────────────────────────────────
-    context_text = build_context(intent, entities)
+    context_text = build_context(user_id, intent, entities)
 
     # ── 3. Build prompt ───────────────────────────────────────────────────────
     system_instruction, contents = build_prompt(message, context_text, history)
@@ -81,7 +80,7 @@ def handle_chat(
         model = provider_metadata.get("model", "unknown")
         
         chat_repo.save_chat(
-            user_id=UserContext.get_current_user_id(),
+            user_id=user_id,
             question=message,
             answer=response_dict.get("answer", ""),
             provider=provider,

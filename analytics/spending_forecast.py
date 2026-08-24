@@ -49,6 +49,7 @@ class SpendingForecast:
 
     def forecast(
         self,
+        user_id: str,
         transactions: list,
         reference_date: Optional[date] = None,
     ) -> dict:
@@ -92,10 +93,10 @@ class SpendingForecast:
         )
 
         # ── Step 7 · Remaining budget ────────────────────────────────────
-        remaining_budget = self._remaining_budget(monthly["expense"])
+        remaining_budget = self._remaining_budget(user_id, monthly["expense"])
 
         # ── Step 8 · Budget risk ─────────────────────────────────────────
-        total_budget = sum(get_budget().values()) if get_budget() else 0.0
+        total_budget = sum(get_budget(user_id).values()) if get_budget(user_id) else 0.0
         budget_risk = self._budget_risk(projected_expense, total_budget)
 
         # ── Step 9 · Cashflow prediction = projected_savings ────────────
@@ -208,12 +209,12 @@ class SpendingForecast:
 
         return total
 
-    def _remaining_budget(self, expense_so_far: float) -> float:
+    def _remaining_budget(self, user_id: str, expense_so_far: float) -> float:
         """
         Computes budget remaining = total_monthly_budget − expense_so_far.
         Returns 0.0 if no budget is configured.
         """
-        budgets = get_budget()
+        budgets = get_budget(user_id)
         if not budgets:
             return 0.0
         total_budget = sum(budgets.values())

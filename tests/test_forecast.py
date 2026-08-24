@@ -1,3 +1,4 @@
+from tests.conftest import TEST_USER_ID
 """
 Tests for Spending Forecast & Cash Flow Prediction.
 
@@ -67,9 +68,9 @@ def make_transaction(
 @pytest.fixture(autouse=True)
 def reset_stores():
     """Reset budget store before every test (transactions are reset by conftest.isolate_test_user)."""
-    save_budget(DEFAULT_BUDGET.copy())
+    save_budget(TEST_USER_ID, DEFAULT_BUDGET.copy())
     yield
-    save_budget(DEFAULT_BUDGET.copy())
+    save_budget(TEST_USER_ID, DEFAULT_BUDGET.copy())
 
 
 
@@ -89,42 +90,42 @@ class TestForecastEmptyTransactions:
 
     def test_returns_dict(self):
         sf = SpendingForecast()
-        result = sf.forecast([], reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, [], reference_date=REF_DATE)
         assert isinstance(result, dict)
 
     def test_all_top_level_keys(self):
         sf = SpendingForecast()
-        result = sf.forecast([], reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, [], reference_date=REF_DATE)
         assert set(result.keys()) == {
             "current_month", "forecast", "daily_average", "cashflow_prediction"
         }
 
     def test_current_month_zeros(self):
         sf = SpendingForecast()
-        result = sf.forecast([], reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, [], reference_date=REF_DATE)
         cm = result["current_month"]
         assert cm["income"] == 0.0
         assert cm["expense"] == 0.0
 
     def test_daily_average_zero(self):
         sf = SpendingForecast()
-        result = sf.forecast([], reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, [], reference_date=REF_DATE)
         assert result["daily_average"] == 0.0
 
     def test_projected_expense_zero(self):
         sf = SpendingForecast()
-        result = sf.forecast([], reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, [], reference_date=REF_DATE)
         assert result["forecast"]["projected_month_end_expense"] == 0.0
 
     def test_budget_risk_low_when_no_data(self):
         sf = SpendingForecast()
-        result = sf.forecast([], reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, [], reference_date=REF_DATE)
         assert result["forecast"]["budget_risk"] == "Low"
 
     def test_does_not_raise(self):
         sf = SpendingForecast()
         try:
-            sf.forecast([], reference_date=REF_DATE)
+            sf.forecast(TEST_USER_ID, [], reference_date=REF_DATE)
         except Exception as exc:
             pytest.fail(f"forecast() raised: {exc}")
 
@@ -138,7 +139,7 @@ class TestForecastOnlyCredits:
             make_transaction(2, jan_date(10), 5000.0, "Credit", "Freelance"),
         ]
         sf = SpendingForecast()
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
 
         assert result["current_month"]["income"] == 55000.0
         assert result["current_month"]["expense"] == 0.0
@@ -148,7 +149,7 @@ class TestForecastOnlyCredits:
     def test_projected_savings_equals_income_when_no_expense(self):
         txns = [make_transaction(1, jan_date(5), 50000.0, "Credit", "Employer")]
         sf = SpendingForecast()
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
 
         # projected_expense = 0, pending_recurring ≈ 0 (no debits detected)
         assert result["forecast"]["projected_savings"] == pytest.approx(50000.0, abs=0.1)
@@ -163,7 +164,7 @@ class TestForecastOnlyDebits:
             make_transaction(2, jan_date(10), 1500.0, "Debit", "Swiggy"),
         ]
         sf = SpendingForecast()
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
 
         assert result["current_month"]["income"] == 0.0
         assert result["current_month"]["expense"] == pytest.approx(3500.0)
@@ -174,7 +175,7 @@ class TestForecastOnlyDebits:
             make_transaction(2, jan_date(10), 1500.0, "Debit"),
         ]
         sf = SpendingForecast()
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
 
         assert result["forecast"]["projected_savings"] < 0
 
@@ -194,36 +195,36 @@ class TestForecastNormalCase:
         self.sf = SpendingForecast()
 
     def test_income_correct(self):
-        r = self.sf.forecast(self.txns, reference_date=self.ref)
+        r = self.sf.forecast(TEST_USER_ID, self.txns, reference_date=self.ref)
         assert r["current_month"]["income"] == 50000.0
 
     def test_expense_correct(self):
-        r = self.sf.forecast(self.txns, reference_date=self.ref)
+        r = self.sf.forecast(TEST_USER_ID, self.txns, reference_date=self.ref)
         assert r["current_month"]["expense"] == pytest.approx(6500.0)
 
     def test_daily_average(self):
-        r = self.sf.forecast(self.txns, reference_date=self.ref)
+        r = self.sf.forecast(TEST_USER_ID, self.txns, reference_date=self.ref)
         # 6500 / 15 days elapsed
         assert r["daily_average"] == pytest.approx(6500 / 15, rel=1e-3)
 
     def test_projected_expense(self):
-        r = self.sf.forecast(self.txns, reference_date=self.ref)
+        r = self.sf.forecast(TEST_USER_ID, self.txns, reference_date=self.ref)
         expected = (6500 / 15) * 31
         assert r["forecast"]["projected_month_end_expense"] == pytest.approx(
             expected, rel=1e-2
         )
 
     def test_days_elapsed_and_remaining(self):
-        r = self.sf.forecast(self.txns, reference_date=self.ref)
+        r = self.sf.forecast(TEST_USER_ID, self.txns, reference_date=self.ref)
         assert r["current_month"]["days_elapsed"] == 15
         assert r["current_month"]["days_remaining"] == 16   # 31 - 15
 
     def test_cashflow_equals_projected_savings(self):
-        r = self.sf.forecast(self.txns, reference_date=self.ref)
+        r = self.sf.forecast(TEST_USER_ID, self.txns, reference_date=self.ref)
         assert r["cashflow_prediction"] == r["forecast"]["projected_savings"]
 
     def test_forecast_keys_complete(self):
-        r = self.sf.forecast(self.txns, reference_date=self.ref)
+        r = self.sf.forecast(TEST_USER_ID, self.txns, reference_date=self.ref)
         fc = r["forecast"]
         for key in [
             "projected_month_end_expense",
@@ -242,7 +243,7 @@ class TestBudgetRisk:
         sf = SpendingForecast()
         # total budget = 55000 (defaults), Low = projected < 44000
         txns = [make_transaction(1, jan_date(5), 500.0, "Debit")]
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
         # daily_avg = 500/15, projected = (500/15)*31 ≈ 1033 << 44000
         assert result["forecast"]["budget_risk"] == "Low"
 
@@ -254,7 +255,7 @@ class TestBudgetRisk:
         # expense = 46750 * 15 / 31 ≈ 22621
         expense = (total_budget * 0.85 * 15) / 31
         txns = [make_transaction(1, jan_date(5), expense, "Debit")]
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
         assert result["forecast"]["budget_risk"] == "Medium"
 
     def test_risk_high_above_100_pct(self):
@@ -263,14 +264,14 @@ class TestBudgetRisk:
         # expense to make projected > 100% of budget
         expense = (total_budget * 1.1 * 15) / 31
         txns = [make_transaction(1, jan_date(5), expense, "Debit")]
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
         assert result["forecast"]["budget_risk"] == "High"
 
     def test_no_budget_configured_returns_low(self):
-        save_budget({})
+        save_budget(TEST_USER_ID, {})
         sf = SpendingForecast()
         txns = [make_transaction(1, jan_date(5), 99999.0, "Debit")]
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
         assert result["forecast"]["budget_risk"] == "Low"
 
 
@@ -283,7 +284,7 @@ class TestNegativeSavings:
             make_transaction(2, jan_date(5), 12000.0, "Debit", "Rent"),
         ]
         sf = SpendingForecast()
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
         assert result["forecast"]["projected_savings"] < 0
         assert result["cashflow_prediction"] < 0
 
@@ -297,7 +298,7 @@ class TestMonthLengths:
             make_transaction(1, date(ref.year, ref.month, 2), 1000.0, "Debit")
         ]
         sf = SpendingForecast()
-        return sf.forecast(txns, reference_date=ref)
+        return sf.forecast(TEST_USER_ID, txns, reference_date=ref)
 
     def test_31_day_month_january(self):
         ref = date(2025, 1, 15)
@@ -308,14 +309,14 @@ class TestMonthLengths:
         ref = date(2025, 4, 10)
         txns = [make_transaction(1, date(2025, 4, 5), 1000.0, "Debit")]
         sf = SpendingForecast()
-        r = sf.forecast(txns, reference_date=ref)
+        r = sf.forecast(TEST_USER_ID, txns, reference_date=ref)
         assert r["current_month"]["days_elapsed"] + r["current_month"]["days_remaining"] == 30
 
     def test_28_day_month_feb_2023(self):
         ref = date(2023, 2, 14)
         txns = [make_transaction(1, date(2023, 2, 5), 1000.0, "Debit")]
         sf = SpendingForecast()
-        r = sf.forecast(txns, reference_date=ref)
+        r = sf.forecast(TEST_USER_ID, txns, reference_date=ref)
         total = r["current_month"]["days_elapsed"] + r["current_month"]["days_remaining"]
         assert total == 28
 
@@ -325,7 +326,7 @@ class TestMonthLengths:
         ref = date(2024, 2, 15)
         txns = [make_transaction(1, date(2024, 2, 5), 1000.0, "Debit")]
         sf = SpendingForecast()
-        r = sf.forecast(txns, reference_date=ref)
+        r = sf.forecast(TEST_USER_ID, txns, reference_date=ref)
         total = r["current_month"]["days_elapsed"] + r["current_month"]["days_remaining"]
         assert total == 29
 
@@ -338,8 +339,8 @@ class TestMonthLengths:
         txns_apr = [make_transaction(2, date(2025, 4, 5), 900.0, "Debit")]
 
         sf = SpendingForecast()
-        r_jan = sf.forecast(txns_jan, reference_date=ref_jan)
-        r_apr = sf.forecast(txns_apr, reference_date=ref_apr)
+        r_jan = sf.forecast(TEST_USER_ID, txns_jan, reference_date=ref_jan)
+        r_apr = sf.forecast(TEST_USER_ID, txns_apr, reference_date=ref_apr)
 
         # Both have same expense and elapsed days, but different total days
         # So January projection should be larger
@@ -361,7 +362,7 @@ class TestPastMonthTransactionsExcluded:
             make_transaction(2, date(2025, 1, 10), 2000.0, "Debit"),
         ]
         sf = SpendingForecast()
-        result = sf.forecast(txns, reference_date=ref)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=ref)
         assert result["current_month"]["expense"] == pytest.approx(2000.0)
 
 
@@ -377,7 +378,7 @@ class TestLargeDataset:
             )
         sf = SpendingForecast()
         try:
-            result = sf.forecast(txns, reference_date=REF_DATE)
+            result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
             assert result["current_month"]["expense"] > 0
         except Exception as exc:
             pytest.fail(f"Large dataset raised: {exc}")
@@ -389,14 +390,14 @@ class TestRemainingBudget:
     def test_remaining_budget_positive(self):
         txns = [make_transaction(1, jan_date(5), 5000.0, "Debit")]
         sf = SpendingForecast()
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
         total = sum(DEFAULT_BUDGET.values())
         assert result["forecast"]["remaining_budget"] == pytest.approx(total - 5000.0)
 
     def test_remaining_budget_floored_at_zero_when_overspent(self):
         txns = [make_transaction(1, jan_date(5), 999999.0, "Debit")]
         sf = SpendingForecast()
-        result = sf.forecast(txns, reference_date=REF_DATE)
+        result = sf.forecast(TEST_USER_ID, txns, reference_date=REF_DATE)
         assert result["forecast"]["remaining_budget"] == 0.0
 
 
@@ -405,14 +406,14 @@ class TestRemainingBudget:
 class TestForecastService:
     def test_empty_store(self):
         fs = ForecastService()
-        result = fs.get_forecast()
+        result = fs.get_forecast(TEST_USER_ID)
         assert result["current_month"]["income"] == 0.0
         assert result["forecast"]["budget_risk"] == "Low"
 
     def test_does_not_raise_empty(self):
         fs = ForecastService()
         try:
-            fs.get_forecast()
+            fs.get_forecast(TEST_USER_ID)
         except Exception as exc:
             pytest.fail(f"ForecastService.get_forecast() raised: {exc}")
 
@@ -421,9 +422,9 @@ class TestForecastService:
             make_transaction(1, date.today().replace(day=1), 50000.0, "Credit", "Employer"),
             make_transaction(2, date.today().replace(day=2) if date.today().day > 2 else date.today(), 2000.0, "Debit"),
         ]
-        save_transactions(txns)
+        save_transactions(TEST_USER_ID, txns)
         fs = ForecastService()
-        result = fs.get_forecast()
+        result = fs.get_forecast(TEST_USER_ID)
         assert result["current_month"]["income"] >= 0
 
 

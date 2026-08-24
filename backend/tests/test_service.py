@@ -1,3 +1,4 @@
+from tests.conftest import TEST_USER_ID
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi import HTTPException
@@ -31,11 +32,11 @@ def test_duplicate_upload_detection(mock_gen, mock_analyze, mock_health, mock_sa
     mock_gen.return_value = []
 
     # First upload should succeed
-    service.analyze(str(dummy_pdf), "dummy.pdf")
+    service.analyze(TEST_USER_ID, str(dummy_pdf), "dummy.pdf")
     
     # Second upload of the same file should raise HTTP 409
     with pytest.raises(HTTPException) as excinfo:
-        service.analyze(str(dummy_pdf), "dummy.pdf")
+        service.analyze(TEST_USER_ID, str(dummy_pdf), "dummy.pdf")
         
     assert excinfo.value.status_code == 409
     assert "original_upload_time" in excinfo.value.detail
@@ -60,7 +61,7 @@ def test_rollback_on_transaction_failure(mock_save_transactions, mock_mongo, tmp
     mock_save_transactions.side_effect = Exception("Database insertion failed")
     
     with pytest.raises(HTTPException) as excinfo:
-        service.analyze(str(dummy_pdf), "dummy2.pdf")
+        service.analyze(TEST_USER_ID, str(dummy_pdf), "dummy2.pdf")
         
     assert excinfo.value.status_code == 500
     
@@ -90,7 +91,7 @@ def test_successful_upload(mock_gen, mock_analyze, mock_health, mock_save, mock_
     mock_analyze.return_value = {}
     mock_gen.return_value = []
     
-    result = service.analyze(str(dummy_pdf), "success.pdf")
+    result = service.analyze(TEST_USER_ID, str(dummy_pdf), "success.pdf")
     
     assert "transactions" in result
     assert "health" in result
@@ -106,7 +107,7 @@ def test_upload_no_transactions(mock_mongo, tmp_path):
     service.parser.read_pdf = MagicMock(return_value=[])
     
     with pytest.raises(HTTPException) as excinfo:
-        service.analyze(str(dummy_pdf), "empty.pdf")
+        service.analyze(TEST_USER_ID, str(dummy_pdf), "empty.pdf")
     
     assert excinfo.value.status_code == 400
     assert "No transactions" in str(excinfo.value.detail)

@@ -9,8 +9,8 @@ class StatementRepository(BaseRepository[StatementDocument]):
             model_class=StatementDocument
         )
 
-    def find_by_hash(self, file_hash: str) -> StatementDocument | None:
-        return self.find_one({"hash": file_hash})
+    def find_by_hash(self, file_hash: str, user_id: str) -> StatementDocument | None:
+        return self.find_one({"hash": file_hash, "userId": user_id})
 
     def save_statement(self, statement: StatementDocument) -> str:
         return self.create(statement)

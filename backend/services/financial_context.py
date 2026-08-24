@@ -30,14 +30,14 @@ _dashboard_service = DashboardService()
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def build_context(intent: Intent, entities: list[str] = None) -> str:
+def build_context(user_id: str, intent: Intent, entities: list[str] = None) -> str:
     """
     Returns a formatted text block describing the user's financial context,
     tailored to the supplied *intent* and *entities*.
     """
     entities = entities or []
     try:
-        transactions = get_transactions()
+        transactions = get_transactions(user_id)
 
         if not transactions:
             return (
@@ -54,15 +54,15 @@ def build_context(intent: Intent, entities: list[str] = None) -> str:
         # ── 2. Intent-specific blocks ────────────────────────────────────────
         if intent in ("budget_advice", "category_analysis", "financial_health",
                       "recommendations"):
-            lines += _budget_block(health["category_totals"], entities)
+            lines += _budget_block(user_id, health["category_totals"], entities)
 
         if intent in ("forecast", "savings_advice", "comparison",
                       "recommendations"):
-            lines += _forecast_block()
+            lines += _forecast_block(user_id)
 
         if intent in ("subscription_review", "merchant_analysis",
                       "financial_health", "recommendations"):
-            lines += _recurring_block()
+            lines += _recurring_block(user_id)
 
         if intent in ("spending_analysis", "category_analysis",
                       "expense_summary", "recommendations"):
@@ -112,8 +112,8 @@ def _summary_block(health: dict) -> list[str]:
     ]
 
 
-def _budget_block(category_totals: dict, entities: list[str]) -> list[str]:
-    budget_items = analyze_budget(category_totals)
+def _budget_block(user_id: str, category_totals: dict, entities: list[str]) -> list[str]:
+    budget_items = analyze_budget(user_id, category_totals)
     if not budget_items:
         return []
 
@@ -130,9 +130,9 @@ def _budget_block(category_totals: dict, entities: list[str]) -> list[str]:
     return lines
 
 
-def _forecast_block() -> list[str]:
+def _forecast_block(user_id: str) -> list[str]:
     try:
-        fc = _forecast_service.get_forecast()
+        fc = _forecast_service.get_forecast(user_id)
         if not fc or not fc.get("forecast"):
             return []
 
@@ -153,8 +153,8 @@ def _forecast_block() -> list[str]:
         return []
 
 
-def _recurring_block() -> list[str]:
-    recurring = get_recurring_payments()
+def _recurring_block(user_id: str) -> list[str]:
+    recurring = get_recurring_payments(user_id)
     if not recurring:
         return ["── Recurring Payments ──────────────────────────────────────", "None detected.", ""]
 

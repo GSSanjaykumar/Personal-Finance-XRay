@@ -1,17 +1,15 @@
 from backend.repositories.transaction_repository import TransactionRepository
-from backend.auth.user_context import UserContext
 from backend.database.models import TransactionDocument
 from parsers.schema import Transaction
 from datetime import datetime, timezone
 
 _repo = TransactionRepository()
 
-def save_transactions(transactions: list[Transaction], statement_id: str = "default"):
+def save_transactions(user_id: str, transactions: list[Transaction], statement_id: str = "default"):
     """
     Adapter method to save transactions. 
     Requires statement_id which was added during the migration.
     """
-    user_id = UserContext.get_current_user_id()
     now = datetime.now(timezone.utc)
     
     docs = []
@@ -35,9 +33,8 @@ def save_transactions(transactions: list[Transaction], statement_id: str = "defa
         
     _repo.bulk_insert(docs)
 
-def get_transactions() -> list[Transaction]:
+def get_transactions(user_id: str) -> list[Transaction]:
     """
-    Adapter method to retrieve transactions for the current user.
+    Adapter method to retrieve transactions for the specific user.
     """
-    user_id = UserContext.get_current_user_id()
     return _repo.find_by_user(user_id)

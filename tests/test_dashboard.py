@@ -1,3 +1,4 @@
+from tests.conftest import TEST_USER_ID
 """
 Tests for the Dashboard Aggregation Module.
 
@@ -76,12 +77,12 @@ class TestDashboardServiceEmptyStore:
 
     def test_returns_dict(self):
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         assert isinstance(result, dict)
 
     def test_all_keys_present(self):
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         required_keys = {
             "summary",
             "financial_health",
@@ -95,7 +96,7 @@ class TestDashboardServiceEmptyStore:
 
     def test_summary_zeros(self):
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         summary = result["summary"]
         assert summary["total_income"] == 0.0
         assert summary["total_expense"] == 0.0
@@ -104,7 +105,7 @@ class TestDashboardServiceEmptyStore:
 
     def test_collections_are_empty(self):
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         assert result["financial_health"] == {}
         assert result["budget"] == {}
         assert result["analytics"] == {}
@@ -116,7 +117,7 @@ class TestDashboardServiceEmptyStore:
         service = DashboardService()
         # Must never throw an exception even with empty store
         try:
-            service.get_dashboard()
+            service.get_dashboard(TEST_USER_ID)
         except Exception as exc:
             pytest.fail(f"get_dashboard() raised an exception: {exc}")
 
@@ -125,9 +126,9 @@ class TestDashboardServiceWithData:
     """Tests for get_dashboard() when the store contains transactions."""
 
     def test_summary_correct(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         summary = result["summary"]
 
         assert summary["total_income"] == 50000.0
@@ -136,9 +137,9 @@ class TestDashboardServiceWithData:
         assert summary["transaction_count"] == 3
 
     def test_financial_health_keys(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         fh = result["financial_health"]
 
         assert "score" in fh
@@ -150,29 +151,29 @@ class TestDashboardServiceWithData:
         assert "category_totals" in fh
 
     def test_financial_health_grade_valid(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         assert result["financial_health"]["grade"] in {"A", "B", "C", "D", "F"}
 
     def test_financial_health_status_valid(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         assert result["financial_health"]["status"] in {
             "Excellent", "Good", "Fair", "Poor", "Critical"
         }
 
     def test_budget_is_list(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         assert isinstance(result["budget"], list)
 
     def test_budget_item_shape(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         for item in result["budget"]:
             assert "category" in item
             assert "spent" in item
@@ -182,45 +183,45 @@ class TestDashboardServiceWithData:
             assert "status" in item
 
     def test_analytics_structure(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         analytics = result["analytics"]
         assert "spending" in analytics
         assert "total_expense" in analytics["spending"]
         assert "by_category" in analytics["spending"]
 
     def test_recurring_is_list(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         # With only 1 transaction per merchant, recurring will be empty
         assert isinstance(result["recurring"], list)
 
     def test_insights_is_list(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         assert isinstance(result["insights"], list)
         assert len(result["insights"]) > 0
 
     def test_recent_transactions_max_10(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         assert len(result["recent_transactions"]) <= 10
 
     def test_recent_transactions_sorted_desc(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         dates = [t["date"] for t in result["recent_transactions"]]
         assert dates == sorted(dates, reverse=True)
 
     def test_recent_transaction_shape(self, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
         for txn in result["recent_transactions"]:
             assert "date" in txn
             assert "merchant" in txn
@@ -235,9 +236,9 @@ class TestDashboardServiceWithData:
         This confirms calculate_financial_health() is used as the single source
         of truth — no duplicate arithmetic.
         """
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         service = DashboardService()
-        result = service.get_dashboard()
+        result = service.get_dashboard(TEST_USER_ID)
 
         assert result["summary"]["total_income"] == result["financial_health"]["income"]
         assert result["summary"]["total_expense"] == result["financial_health"]["expense"]
@@ -269,7 +270,7 @@ class TestDashboardEndpoint:
         assert summary["transaction_count"] == 0
 
     def test_with_data_returns_populated_response(self, auth_client, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         response = auth_client.get("/dashboard")
         assert response.status_code == 200
         body = response.json()
@@ -280,16 +281,16 @@ class TestDashboardEndpoint:
         assert len(body["insights"]) > 0
 
     def test_endpoint_returns_list_for_recurring(self, auth_client, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         response = auth_client.get("/dashboard")
         assert isinstance(response.json()["recurring"], list)
 
     def test_endpoint_returns_list_for_budget(self, auth_client, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         response = auth_client.get("/dashboard")
         assert isinstance(response.json()["budget"], list)
 
     def test_recent_transactions_is_list(self, auth_client, sample_transactions):
-        save_transactions(sample_transactions)
+        save_transactions(TEST_USER_ID, sample_transactions)
         response = auth_client.get("/dashboard")
         assert isinstance(response.json()["recent_transactions"], list)

@@ -21,7 +21,7 @@ def test_statement_repository_crud(mock_mongo):
     assert inserted_id is not None
     
     # Test Read
-    retrieved = repo.find_by_hash("hash123")
+    retrieved = repo.find_by_hash("hash123", "user123")
     assert retrieved is not None
     assert retrieved.userId == "user123"
     

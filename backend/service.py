@@ -14,7 +14,6 @@ from backend.transaction_store import save_transactions
 from backend.budget_insights import generate_budget_insights
 from analytics.recurring_detector import RecurringDetector
 from backend.repositories.statement_repository import StatementRepository
-from backend.auth.user_context import UserContext
 from backend.database.models import StatementDocument
 
 logger = logging.getLogger(__name__)
@@ -29,9 +28,8 @@ class FinanceService:
         self.recurring_detector = RecurringDetector()
         self.statement_repo = StatementRepository()
 
-    def analyze(self, pdf_path, filename="unknown"):
+    def analyze(self, user_id: str, pdf_path, filename="unknown"):
         start_time = time.perf_counter()
-        user_id = UserContext.get_current_user_id()
         
         # 1. Generate SHA-256 Hash
         hasher = hashlib.sha256()
@@ -40,7 +38,7 @@ class FinanceService:
         file_hash = hasher.hexdigest()
 
         # 2. Check for Duplicates
-        existing_stmt = self.statement_repo.find_by_hash(file_hash)
+        existing_stmt = self.statement_repo.find_by_hash(file_hash, user_id)
         if existing_stmt:
             logger.warning(f"Duplicate upload attempt by user {user_id} for file {filename}")
             raise HTTPException(
@@ -85,7 +83,7 @@ class FinanceService:
         # 5. Save Transactions with Rollback Strategy
         db_start = time.perf_counter()
         try:
-            save_transactions(transactions, statement_id=statement_id)
+            save_transactions(user_id, transactions, statement_id=statement_id)
         except Exception as e:
             logger.error(f"Failed to bulk insert transactions. Triggering rollback. Error: {e}")
             self.statement_repo.delete({"_id": statement_id})
@@ -97,7 +95,7 @@ class FinanceService:
         # 6. Generate Metrics (Dashboard/Analytics)
         metrics_start = time.perf_counter()
         health = calculate_financial_health(transactions)
-        budget = analyze_budget(health["category_totals"])
+        budget = analyze_budget(user_id, health["category_totals"])
         budget_insights = generate_budget_insights(budget)
         expense_by_category, total_expense = self.spending_analyzer.analyze(transactions)
         recurring = self.recurring_detector.detect(transactions)

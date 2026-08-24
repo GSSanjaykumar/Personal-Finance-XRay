@@ -1,9 +1,9 @@
 from backend.budget_store import get_budget
 
 
-def analyze_budget(category_totals):
+def analyze_budget(user_id: str, category_totals: dict):
 
-    budgets = get_budget()
+    budgets = get_budget(user_id)
 
     result = []
 

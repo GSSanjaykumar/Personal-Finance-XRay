@@ -64,6 +64,7 @@ async def chat(request: ChatRequest, current_user = Depends(get_current_user)) -
     history_dicts = [h.model_dump() for h in request.history]
 
     result = handle_chat(
+        user_id=str(current_user.id),
         message=request.message,
         history=history_dicts,
     )

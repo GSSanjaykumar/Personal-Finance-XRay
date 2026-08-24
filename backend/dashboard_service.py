@@ -36,7 +36,7 @@ class DashboardService:
     # Public API
     # ------------------------------------------------------------------
 
-    def get_dashboard(self) -> dict:
+    def get_dashboard(self, user_id: str) -> dict:
         """
         Returns a fully aggregated dashboard dictionary.
 
@@ -51,7 +51,7 @@ class DashboardService:
                 "recent_transactions":  [ { date, merchant, amount, category, transaction_type, description }, ... ]
             }
         """
-        transactions = get_transactions()
+        transactions = get_transactions(user_id)
 
         if not transactions:
             return self._empty_response()
@@ -66,7 +66,7 @@ class DashboardService:
         financial_health = self._build_financial_health(health)
 
         # ── Budget block (reuses category_totals from health) ──────────
-        budget = analyze_budget(health["category_totals"])
+        budget = analyze_budget(user_id, health["category_totals"])
 
         # ── Analytics block ─────────────────────────────────────────────
         analytics = self._build_analytics(transactions)

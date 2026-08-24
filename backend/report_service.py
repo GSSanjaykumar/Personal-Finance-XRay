@@ -33,7 +33,7 @@ class ReportService:
         self._dashboard_service = DashboardService()
         self._forecast_service = ForecastService()
 
-    def generate_pdf(self) -> bytes:
+    def generate_pdf(self, user_id: str) -> bytes:
         """
         Aggregate all service data and build the PDF.
 
@@ -41,8 +41,8 @@ class ReportService:
             Raw PDF bytes suitable for direct HTTP streaming.
         """
         # ── Single call per service ──────────────────────────────────────
-        dashboard_data = self._dashboard_service.get_dashboard()
-        forecast_data  = self._forecast_service.get_forecast()
+        dashboard_data = self._dashboard_service.get_dashboard(user_id)
+        forecast_data  = self._forecast_service.get_forecast(user_id)
 
         # ── Merge into one unified payload ───────────────────────────────
         report_data = {

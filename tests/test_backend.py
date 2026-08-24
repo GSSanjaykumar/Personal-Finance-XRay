@@ -1,3 +1,4 @@
+from tests.conftest import TEST_USER_ID
 import pytest
 from fastapi.testclient import TestClient
 from backend.app import app
@@ -37,7 +38,7 @@ def test_calculate_financial_health(sample_health_transactions):
 def test_analyze_budget():
     category_totals = {"Food": 12000.0, "Entertainment": 5000.0}
     # default budget is 10000
-    result = analyze_budget(category_totals)
+    result = analyze_budget(TEST_USER_ID, category_totals)
     food_budget = next(b for b in result if b["category"] == "Food")
     ent_budget = next(b for b in result if b["category"] == "Entertainment")
 

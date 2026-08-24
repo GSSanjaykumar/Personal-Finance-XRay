@@ -1,7 +1,7 @@
 import os
 import logging
 from pymongo import ASCENDING, DESCENDING
-from pymongo.errors import PyMongoError
+from pymongo.errors import PyMongoError, OperationFailure
 from backend.database.connection import get_db
 
 logger = logging.getLogger(__name__)
@@ -35,8 +35,18 @@ def init_db():
         db[tx_col].create_index([("userId", ASCENDING), ("date", DESCENDING)])
         db[tx_col].create_index([("userId", ASCENDING), ("category", ASCENDING)])
         
+        # Statements index migration: safely drop old global hash_1 index
+        try:
+            db[stmt_col].drop_index("hash_1")
+            logger.info("Successfully dropped old hash_1 index from statements collection.")
+        except OperationFailure as e:
+            if e.code != 27:  # 27 is IndexNotFound
+                logger.warning(f"Could not drop hash_1 index: {e}")
+        except PyMongoError as e:
+            logger.warning(f"Could not drop hash_1 index due to error: {e}")
+
         # Statements index
-        db[stmt_col].create_index([("hash", ASCENDING)], unique=True)
+        db[stmt_col].create_index([("hash", ASCENDING), ("userId", ASCENDING)], unique=True)
         db[stmt_col].create_index([("userId", ASCENDING)])
 
         # Recurring indexes

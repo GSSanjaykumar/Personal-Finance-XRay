@@ -58,32 +58,32 @@ async def upload_pdf(file: UploadFile = File(...), current_user = Depends(get_cu
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    result = service.analyze(file_path, filename=file.filename)
+    result = service.analyze(str(current_user.id), file_path, filename=file.filename)
 
     return result
 
 @router.get("/budget")
 def read_budget(current_user = Depends(get_current_user)):
-    return get_budget()
+    return get_budget(str(current_user.id))
 
 @router.put("/budget")
 def update_budget(budget: dict = Body(...), current_user = Depends(get_current_user)):
 
     print("Received:", budget)
 
-    save_budget(budget)
+    save_budget(str(current_user.id), budget)
 
-    print("Stored:", get_budget())
+    print("Stored:", get_budget(str(current_user.id)))
 
     return {
         "message": "Budget updated successfully",
-        "budget": get_budget()
+        "budget": get_budget(str(current_user.id))
     }
 
 @router.get("/budget-analysis")
 def budget_analysis(current_user = Depends(get_current_user)):
 
-    transactions = get_transactions()
+    transactions = get_transactions(str(current_user.id))
 
     if not transactions:
         return []
@@ -92,11 +92,11 @@ def budget_analysis(current_user = Depends(get_current_user)):
         transactions
     )["category_totals"]
 
-    return analyze_budget(category_totals)
+    return analyze_budget(str(current_user.id), category_totals)
 
 @router.get("/recurring")
 def recurring_payments(current_user = Depends(get_current_user)):
-    return get_recurring_payments()
+    return get_recurring_payments(str(current_user.id))
 
 
 @router.get("/dashboard")
@@ -105,7 +105,7 @@ def get_dashboard(current_user = Depends(get_current_user)):
     Aggregated dashboard endpoint.
     Delegates entirely to DashboardService — no business logic here.
     """
-    return dashboard_service.get_dashboard()
+    return dashboard_service.get_dashboard(str(current_user.id))
 
 
 @router.get("/forecast")
@@ -114,7 +114,7 @@ def get_forecast(current_user = Depends(get_current_user)):
     Spending forecast & cash-flow prediction endpoint.
     Delegates entirely to ForecastService — no business logic here.
     """
-    return forecast_service.get_forecast()
+    return forecast_service.get_forecast(str(current_user.id))
 
 
 @router.get("/report")
@@ -126,7 +126,7 @@ def get_report(format: str = "pdf", current_user = Depends(get_current_user)):
     """
     from datetime import date
     filename = f"Financial_Report_{date.today().isoformat()}.pdf"
-    pdf_bytes = report_service.generate_pdf()
+    pdf_bytes = report_service.generate_pdf(str(current_user.id))
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -142,4 +142,4 @@ def list_transactions(current_user = Depends(get_current_user)):
     """
     Returns all transactions in the store.
     """
-    return get_transactions()
+    return get_transactions(str(current_user.id))

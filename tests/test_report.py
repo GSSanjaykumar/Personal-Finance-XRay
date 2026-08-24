@@ -1,3 +1,4 @@
+from tests.conftest import TEST_USER_ID
 """
 Tests for the AI Financial Report Generator.
 
@@ -62,9 +63,9 @@ SAMPLE_TXNS = [
 @pytest.fixture(autouse=True)
 def reset_stores():
     """Reset budget store before every test (transactions are reset by conftest.isolate_test_user)."""
-    save_budget(DEFAULT_BUDGET.copy())
+    save_budget(TEST_USER_ID, DEFAULT_BUDGET.copy())
     yield
-    save_budget(DEFAULT_BUDGET.copy())
+    save_budget(TEST_USER_ID, DEFAULT_BUDGET.copy())
 
 
 # ── Minimal data dict for unit tests (bypasses service layer) ─────────────────
@@ -267,32 +268,32 @@ class TestReportBuilderEdgeCases:
 class TestReportService:
     def test_empty_store_returns_bytes(self):
         rs = ReportService()
-        result = rs.generate_pdf()
+        result = rs.generate_pdf(TEST_USER_ID)
         assert isinstance(result, bytes)
 
     def test_empty_store_valid_pdf(self):
         rs = ReportService()
-        result = rs.generate_pdf()
+        result = rs.generate_pdf(TEST_USER_ID)
         assert result[:5] == b"%PDF-"
 
     def test_does_not_raise_empty(self):
         rs = ReportService()
         try:
-            rs.generate_pdf()
+            rs.generate_pdf(TEST_USER_ID)
         except Exception as exc:
             pytest.fail(f"ReportService.generate_pdf() raised: {exc}")
 
     def test_with_transactions(self):
-        save_transactions(SAMPLE_TXNS)
+        save_transactions(TEST_USER_ID, SAMPLE_TXNS)
         rs = ReportService()
-        result = rs.generate_pdf()
+        result = rs.generate_pdf(TEST_USER_ID)
         assert result[:5] == b"%PDF-"
         assert len(result) > 5000
 
     def test_larger_with_data_than_without(self):
-        empty_pdf = ReportService().generate_pdf()
-        save_transactions(SAMPLE_TXNS)
-        full_pdf = ReportService().generate_pdf()
+        empty_pdf = ReportService().generate_pdf(TEST_USER_ID)
+        save_transactions(TEST_USER_ID, SAMPLE_TXNS)
+        full_pdf = ReportService().generate_pdf(TEST_USER_ID)
         assert len(full_pdf) >= len(empty_pdf)
 
 
@@ -334,7 +335,7 @@ class TestReportEndpoint:
         assert clen == len(response.content)
 
     def test_with_transactions(self, auth_client):
-        save_transactions(SAMPLE_TXNS)
+        save_transactions(TEST_USER_ID, SAMPLE_TXNS)
         response = auth_client.get("/report")
         assert response.status_code == 200
         assert response.content[:5] == b"%PDF-"
@@ -355,7 +356,7 @@ class TestReportEndpoint:
         ]
         txns.append(make_transaction(999, date(2025, 1, 1),
                                      100000.0, "Credit", "Employer", "Income"))
-        save_transactions(txns)
+        save_transactions(TEST_USER_ID, txns)
 
         response = auth_client.get("/report")
         assert response.status_code == 200

@@ -1,3 +1,4 @@
+from tests.conftest import TEST_USER_ID
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch
@@ -35,7 +36,7 @@ def test_ready_endpoint_not_ready(mock_get_client):
 @patch('backend.routes.get_transactions')
 def test_pymongo_error_handler(mock_get_transactions):
     from backend.auth.dependencies import get_current_user
-    app.dependency_overrides[get_current_user] = lambda: None
+    app.dependency_overrides[get_current_user] = lambda: type("FakeUser", (), {"id": "fake_id"})()
     
     # Route /transactions calls get_transactions()
     mock_get_transactions.side_effect = PyMongoError("Database timeout")

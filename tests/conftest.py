@@ -30,7 +30,6 @@ import backend.config  # noqa: F401
 
 from backend.app import app
 from backend.auth.security import create_access_token
-from backend.auth.user_context import UserContext
 from backend.database.connection import get_db
 from backend.database.models import UserDocument
 from backend.repositories.user_repository import UserRepository
@@ -112,7 +111,6 @@ def isolate_test_user():
     After each test:
       3. Delete all test user docs again (cleanup).
     """
-    UserContext.set_current_user_id(TEST_USER_ID)
     _wipe_test_user_data()
     yield
     _wipe_test_user_data()
