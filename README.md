@@ -57,21 +57,22 @@ Merchant Matching
         v
 Structured Transactions
         |
-        +------------------+------------------+
-        |                  |                  |
-        v                  v                  v
-   Statistics       Spending Analysis   Recurring Detection
-        |                  |                  |
-        +------------------+------------------+
-                           |
-                           v
-                  Financial Analysis
-                           |
-                           v
-                      FastAPI API
-                           |
-                           v
-                    React Frontend
+        +-------------------+
+        |         |         |
+        v         v         v
+   Statistics  Spending  Recurring
+               Analysis  Detection
+        |         |         |
+        +---------+---------+
+                  |
+                  v
+         Financial Analysis
+                  |
+                  v
+             FastAPI API
+                  |
+                  v
+            React Frontend
 ````
 
 ---
